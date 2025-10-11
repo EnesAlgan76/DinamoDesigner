@@ -65,7 +65,7 @@ class CanvasPanel(
     private fun createComponentPreview(component: ComponentInstance): JPanel {
         return JPanel(BorderLayout()).apply {
             isOpaque = false
-            border = JBUI.Borders.empty(5)
+            border = JBUI.Borders.empty()
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
 
             val definition = ComponentRegistry.getComponentByType(component.type)
@@ -88,6 +88,31 @@ class CanvasPanel(
                     add(label, BorderLayout.CENTER)
                 }
             }
+
+            // Silme butonu
+            val deleteButton = JButton("×").apply {
+                foreground = Color.WHITE
+                font = Font(font.name, Font.BOLD, 16)
+                isBorderPainted = false
+                isFocusPainted = false
+                isContentAreaFilled = true
+                preferredSize = Dimension(20, 20)
+                cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+
+                addActionListener {
+                    currentScreen?.let { screen ->
+                        componentManager.removeComponent(screen, component.id)
+                        refreshComponents()
+                    }
+                }
+            }
+
+            val deletePanel = JPanel(FlowLayout(FlowLayout.RIGHT, 5, 5)).apply {
+                isOpaque = false
+                add(deleteButton)
+            }
+
+            add(deletePanel, BorderLayout.EAST)
 
             addMouseListener(object : MouseAdapter() {
                 override fun mouseClicked(e: MouseEvent) {
