@@ -1,12 +1,13 @@
 package org.jetbrains.plugins.designer.codegen
 
+import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.designer.models.Screen
 import org.jetbrains.plugins.designer.models.ScreenType
 import org.jetbrains.plugins.template.designer.components.ComponentRegistry
 
 object CodeGenerator {
 
-    fun generateFullFlowCode(className: String, screens: List<Screen>): String {
+    fun generateFullFlowCode(project: Project, className: String, screens: List<Screen>): String {
         if (screens.isEmpty()) {
             return "// No screens to generate. Please add screens first."
         }
@@ -14,21 +15,21 @@ object CodeGenerator {
         val code = StringBuilder()
 
         code.append(generateClassHeader(className))
-        code.append(generateScreenIdentifiers(screens))
-        code.append(generateGetPropertiesResponse(screens))
-        code.append(generateGetActionResponse(screens))
+        code.append(generateScreenIdentifiers(project, screens))
+        code.append(generateGetPropertiesResponse(project, screens))
+        code.append(generateGetActionResponse(project, screens))
 
         screens.forEach { screen ->
             when (screen.type) {
-                ScreenType.Form -> code.append(generateFormScreenMethods(screen, screens))
-                ScreenType.Confirm -> code.append(generateConfirmScreenMethods(screen))
-                ScreenType.Success -> code.append(generateSuccessScreenMethods(screen, screens))
-                ScreenType.List -> code.append(generateListScreenMethods(screen))
+                ScreenType.Form -> code.append(generateFormScreenMethods(project, screen, screens))
+                ScreenType.Confirm -> code.append(generateConfirmScreenMethods(project, screen))
+                ScreenType.Success -> code.append(generateSuccessScreenMethods(project, screen, screens))
+                ScreenType.List -> code.append(generateListScreenMethods(project, screen))
                 else -> {}
             }
         }
 
-        code.append(generateUtilityMethods(screens))
+        code.append(generateUtilityMethods(project, screens))
         code.append(generateClassFooter())
 
         return code.toString()
@@ -66,11 +67,13 @@ public class $className extends TFBaseFlow {
 """.trimIndent()
     }
 
-    private fun generateScreenIdentifiers(screens: List<Screen>): String {
+    private fun generateScreenIdentifiers(project: Project, screens: List<Screen>): String {
         val code = StringBuilder()
         code.append("    // ========== SCREEN IDENTIFIERS ==========\n")
+        code.append("    // Note: Screen identifiers are managed in TFIdentifier class\n")
         screens.forEach { screen ->
-            code.append("    public static final String ${screen.name} = \"${screen.name}\";\n")
+            // Register the identifier in TFIdentifier but don't generate duplicate constants here
+            TFIdentifierManager.getOrCreateIdentifier(project, screen.name)
         }
         code.append("\n")
         return code.toString()
@@ -82,7 +85,7 @@ public class $className extends TFBaseFlow {
 
     // ========== MAIN METHODS ==========
 
-    private fun generateGetPropertiesResponse(screens: List<Screen>): String {
+    private fun generateGetPropertiesResponse(project: Project, screens: List<Screen>): String {
         val code = StringBuilder()
 
         code.append("""
@@ -114,8 +117,9 @@ public class $className extends TFBaseFlow {
 
         entryScreens.forEachIndexed { index, screen ->
             val condition = if (index == 0) "if" else "} else if"
+            val screenIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, screen.name)
 
-            code.append("\n        $condition (identifier.equals(${screen.name})) {\n")
+            code.append("\n        $condition (identifier.equals($screenIdentifier)) {\n")
             code.append("            screenType = TFScreenType.${screen.type};\n")
             code.append("            properties.put(TFIdentifier.TITLE, messages.getMessage(\"${screen.name.lowercase()}_title\"));\n")
 
@@ -148,7 +152,7 @@ public class $className extends TFBaseFlow {
         return code.toString()
     }
 
-    private fun generateGetActionResponse(screens: List<Screen>): String {
+    private fun generateGetActionResponse(project: Project, screens: List<Screen>): String {
         val code = StringBuilder()
 
         code.append("""
@@ -179,10 +183,12 @@ public class $className extends TFBaseFlow {
             if (formScreen != null && confirmScreen != null) {
                 val condition = if (isFirst) "if" else "} else if"
                 isFirst = false
+                val formIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, formScreen.name)
+                val confirmIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, confirmScreen.name)
 
-                code.append("\n        $condition (request.getIdentifier().equals(TFScreenType.Form + ${formScreen.name})) {\n")
+                code.append("\n        $condition (request.getIdentifier().equals(TFScreenType.Form + $formIdentifier)) {\n")
                 code.append("            validate${formScreen.name}(request);\n\n")
-                code.append("            identifier = ${confirmScreen.name};\n")
+                code.append("            identifier = $confirmIdentifier;\n")
                 code.append("            screenType = TFScreenType.Confirm;\n")
                 code.append("            properties = get${confirmScreen.name}Properties(service, messages, request);\n")
                 code.append("        ")
@@ -197,9 +203,12 @@ public class $className extends TFBaseFlow {
                     code.append("} else if")
                 }
 
-                code.append(" (request.getIdentifier().equals(TFScreenType.Confirm + ${confirmScreen.name})) {\n")
+                val confirmIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, confirmScreen.name)
+                val successIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, successScreen.name)
+
+                code.append(" (request.getIdentifier().equals(TFScreenType.Confirm + $confirmIdentifier)) {\n")
                 code.append("            submit$baseName(service, messages, request);\n\n")
-                code.append("            identifier = ${successScreen.name};\n")
+                code.append("            identifier = $successIdentifier;\n")
                 code.append("            screenType = TFScreenType.Success;\n")
                 code.append("            properties = get${successScreen.name}Properties(messages);\n")
                 code.append("            properties.put(TFIdentifier.DATAMODELS, getReloadDataModels());\n")
@@ -219,10 +228,14 @@ public class $className extends TFBaseFlow {
                             code.append("} else if")
                         }
 
+                        val formIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, formScreen.name)
+                        val targetIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, targetScreen.name)
                         val buttonId = button.properties["identifier"] as? String ?: ""
-                        code.append(" (request.getIdentifier().equals(${formScreen.name}) &&\n")
-                        code.append("                \"$buttonId\".equals(request.getParameters().get(TFIdentifier.IDENTIFIER))) {\n")
-                        code.append("            identifier = ${targetScreen.name};\n")
+                        val buttonIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, buttonId)
+
+                        code.append(" (request.getIdentifier().equals($formIdentifier) &&\n")
+                        code.append("                $buttonIdentifier.equals(request.getParameters().get(TFIdentifier.IDENTIFIER))) {\n")
+                        code.append("            identifier = $targetIdentifier;\n")
                         code.append("            screenType = TFScreenType.${targetScreen.type};\n")
 
                         when (targetScreen.type) {
@@ -254,7 +267,7 @@ public class $className extends TFBaseFlow {
 
     // ========== SCREEN-SPECIFIC METHODS ==========
 
-    private fun generateFormScreenMethods(screen: Screen, allScreens: List<Screen>): String {
+    private fun generateFormScreenMethods(project: Project, screen: Screen, allScreens: List<Screen>): String {
         val code = StringBuilder()
 
         code.append("""
@@ -271,7 +284,7 @@ public class $className extends TFBaseFlow {
             val componentDef = ComponentRegistry.getComponentByType(component.type)
             if (componentDef != null) {
                 code.append("\n")
-                code.append(CodeFormatter.indent(componentDef.generateCode(component, allScreens), 2))
+                code.append(CodeFormatter.indent(componentDef.generateCode(project, component, allScreens), 2))
                 code.append("\n")
             }
         }
@@ -286,7 +299,7 @@ public class $className extends TFBaseFlow {
         return code.toString()
     }
 
-    private fun generateConfirmScreenMethods(screen: Screen): String {
+    private fun generateConfirmScreenMethods(project: Project, screen: Screen): String {
         val code = StringBuilder()
 
         code.append("""
@@ -324,9 +337,10 @@ public class $className extends TFBaseFlow {
         return code.toString()
     }
 
-    private fun generateSuccessScreenMethods(screen: Screen, allScreens: List<Screen>): String {
+    private fun generateSuccessScreenMethods(project: Project, screen: Screen, allScreens: List<Screen>): String {
         val code = StringBuilder()
-        val firstScreen = allScreens.firstOrNull()?.name ?: "MAIN"
+        val firstScreenName = allScreens.firstOrNull()?.name ?: "MAIN"
+        val firstScreen = TFIdentifierManager.getOrCreateIdentifier(project, firstScreenName)
 
         code.append("""
     private HashMap get${screen.name}Properties(final Messages messages) {
@@ -350,7 +364,7 @@ public class $className extends TFBaseFlow {
         return code.toString()
     }
 
-    private fun generateListScreenMethods(screen: Screen): String {
+    private fun generateListScreenMethods(project: Project, screen: Screen): String {
         val code = StringBuilder()
 
         code.append("""
@@ -372,7 +386,7 @@ public class $className extends TFBaseFlow {
 
     // ========== UTILITY METHODS ==========
 
-    private fun generateUtilityMethods(screens: List<Screen>): String {
+    private fun generateUtilityMethods(project: Project, screens: List<Screen>): String {
         val code = StringBuilder()
 
         // Generate validation methods for each form screen

@@ -1,5 +1,7 @@
 package org.jetbrains.plugins.template.designer.components
 
+import com.intellij.openapi.project.Project
+import org.jetbrains.plugins.designer.codegen.TFIdentifierManager
 import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
@@ -34,15 +36,16 @@ object DatePickerComponent : ComponentDefinition {
         }
     }
 
-    override fun generateCode(component: ComponentInstance, allScreens: List<Screen>): String {
+    override fun generateCode(project: Project, component: ComponentInstance, allScreens: List<Screen>): String {
         val props = component.properties
-        val identifier = props["identifier"] as? String ?: "DATEPICKER"
-        val varName = identifier.lowercase().replace("_", "")
+        val identifierValue = props["identifier"] as? String ?: "DATEPICKER"
+        val identifier = TFIdentifierManager.getOrCreateIdentifier(project, identifierValue)
+        val varName = identifierValue.lowercase().replace("_", "")
         val title = props["title"] as? String ?: "Select date"
         val validation = props["validation"] as? Boolean ?: true
 
         return buildString {
-            appendLine("        TFComponentDateInput $varName = new TFComponentDateInput(\"$identifier\");")
+            appendLine("        TFComponentDateInput $varName = new TFComponentDateInput($identifier);")
             appendLine("        $varName.setTitle(messages.getMessage(\"${title.lowercase().replace(" ", "_")}\"));")
             if (validation) {
                 appendLine("        $varName.setValidation(true);")

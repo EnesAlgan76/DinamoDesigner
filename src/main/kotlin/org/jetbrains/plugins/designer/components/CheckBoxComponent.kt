@@ -1,5 +1,7 @@
 package org.jetbrains.plugins.template.designer.components
 
+import com.intellij.openapi.project.Project
+import org.jetbrains.plugins.designer.codegen.TFIdentifierManager
 import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
@@ -42,10 +44,11 @@ object CheckBoxComponent : ComponentDefinition {
         }
     }
 
-    override fun generateCode(component: ComponentInstance, allScreens: List<Screen>): String {
+    override fun generateCode(project: Project, component: ComponentInstance, allScreens: List<Screen>): String {
         val props = component.properties
-        val identifier = props["identifier"] as? String ?: "CHECKBOX"
-        val varName = identifier.lowercase().replace("_", "")
+        val identifierValue = props["identifier"] as? String ?: "CHECKBOX"
+        val identifier = TFIdentifierManager.getOrCreateIdentifier(project, identifierValue)
+        val varName = identifierValue.lowercase().replace("_", "")
         val text = props["text"] as? String ?: "Checkbox Text"
         val underlineText = props["underlineText"] as? String ?: ""
         val descriptionText = props["descriptionText"] as? String ?: ""
@@ -59,7 +62,7 @@ object CheckBoxComponent : ComponentDefinition {
         val informationAlertTitle = props["informationAlertTitle"] as? String ?: ""
 
         return buildString {
-            appendLine("        TFComponentCheckBox $varName = new TFComponentCheckBox(\"$identifier\");")
+            appendLine("        TFComponentCheckBox $varName = new TFComponentCheckBox($identifier);")
             appendLine("        $varName.setText(messages.getMessage(\"${text.lowercase().replace(" ", "_")}\"));")
 
             if (underlineText.isNotEmpty()) {

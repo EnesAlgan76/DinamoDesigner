@@ -1,5 +1,7 @@
 package org.jetbrains.plugins.template.designer.components
 
+import com.intellij.openapi.project.Project
+import org.jetbrains.plugins.designer.codegen.TFIdentifierManager
 import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
@@ -33,24 +35,26 @@ object ButtonComponent : ComponentDefinition {
         }
     }
 
-    override fun generateCode(component: ComponentInstance, allScreens: List<Screen>): String {
+    override fun generateCode(project: Project, component: ComponentInstance, allScreens: List<Screen>): String {
         val props = component.properties
-        val identifier = props["identifier"] as? String ?: "BUTTON"
-        val varName = identifier.lowercase().replace("_", "")
+        val identifierValue = props["identifier"] as? String ?: "BUTTON"
+        val identifier = TFIdentifierManager.getOrCreateIdentifier(project, identifierValue)
+        val varName = identifierValue.lowercase().replace("_", "")
         val text = props["text"] as? String ?: "Click Me"
         val targetScreenId = props["targetScreen"] as? String
 
         return buildString {
-            appendLine("        TFComponentButton $varName = new TFComponentButton(\"$identifier\");")
+            appendLine("        TFComponentButton $varName = new TFComponentButton($identifier);")
             appendLine("        $varName.setText(messages.getMessage(\"${text.lowercase().replace(" ", "_")}\"));")
 
             if (!targetScreenId.isNullOrEmpty()) {
                 val targetScreen = allScreens.find { it.id == targetScreenId }
                 if (targetScreen != null) {
+                    val targetIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, targetScreen.name)
                     appendLine("        List<HashMap> ${varName}Actions = new ArrayList<HashMap>();")
                     appendLine("        HashMap ${varName}Action = new HashMap();")
                     appendLine("        ${varName}Action.put(TFIdentifier.ACTION, TFIdentifier.REDIRECT);")
-                    appendLine("        ${varName}Action.put(TFIdentifier.ACTIONIDENTIFIER, ${targetScreen.name});")
+                    appendLine("        ${varName}Action.put(TFIdentifier.ACTIONIDENTIFIER, $targetIdentifier);")
                     appendLine("        ${varName}Actions.add(${varName}Action);")
                     appendLine("        $varName.setActions(${varName}Actions);")
                 }

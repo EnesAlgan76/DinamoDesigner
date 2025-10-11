@@ -1,10 +1,15 @@
 package org.jetbrains.plugins.designer
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import org.jetbrains.plugins.designer.models.*
 import org.jetbrains.plugins.designer.codegen.CodeGenerator
+import org.jetbrains.plugins.designer.settings.PluginSettings
+import org.jetbrains.plugins.designer.settings.SettingsDialog
 import org.jetbrains.plugins.designer.ui.panels.AddScreenDialog
 import org.jetbrains.plugins.designer.ui.panels.EditScreenDialog
 import org.jetbrains.plugins.template.designer.DesignPersistence
@@ -136,6 +141,7 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             val buttonPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 8, 0)).apply {
                 isOpaque = false
 
+                add(createToolbarButton("Settings", ModernButtonStyle.SECONDARY) { showSettings() })
                 add(createToolbarButton("Export", ModernButtonStyle.SECONDARY) { exportDesign() })
                 add(createToolbarButton("Import", ModernButtonStyle.SECONDARY) { importDesign() })
                 add(createToolbarButton("Flow", ModernButtonStyle.INFO) { showScreenFlow() })
@@ -309,9 +315,47 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             return "// No screens to generate. Please add screens first."
         }
 
-        val code = CodeGenerator.generateFullFlowCode("TFGeneratedFlow", screens)
+        val code = CodeGenerator.generateFullFlowCode(project, "TFGeneratedFlow", screens)
         codePreviewPanel.updateCode(code)
+
+        // Check if auto-write is enabled
+        val settings = PluginSettings.getInstance(project)
+        if (settings.autoWriteToEditor) {
+            writeCodeToActiveEditor(code)
+        }
+
         return code
+    }
+
+    private fun writeCodeToActiveEditor(code: String) {
+        ApplicationManager.getApplication().invokeLater {
+            val editorManager = FileEditorManager.getInstance(project)
+            val selectedEditor = editorManager.selectedTextEditor
+
+            if (selectedEditor != null) {
+                val document = selectedEditor.document
+
+                WriteCommandAction.runWriteCommandAction(project) {
+                    // Clear the document and write new code
+                    document.setText(code)
+                }
+
+                // Show notification
+                JOptionPane.showMessageDialog(
+                    contentPane,
+                    "Generated code has been written to the active editor",
+                    "Code Generated",
+                    JOptionPane.INFORMATION_MESSAGE
+                )
+            } else {
+                JOptionPane.showMessageDialog(
+                    contentPane,
+                    "No active editor found. Please open a file first.",
+                    "Auto-write Failed",
+                    JOptionPane.WARNING_MESSAGE
+                )
+            }
+        }
     }
 
     private fun exportDesign() {
@@ -387,6 +431,11 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                 propertiesPanel.showEmptyState()
             }
         }
+    }
+
+    private fun showSettings() {
+        val settingsDialog = SettingsDialog(project)
+        settingsDialog.show()
     }
 
     // ========== DIALOG ACTIONS ==========

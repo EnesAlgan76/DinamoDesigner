@@ -1,5 +1,6 @@
 package org.jetbrains.plugins.template.designer.components
 
+import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
@@ -11,7 +12,7 @@ interface ComponentDefinition {
     val propertyDescriptors: List<PropertyDescriptor>
 
     fun getDisplayIcon(size: Int?): ImageIcon
-    fun generateCode(component: ComponentInstance, allScreens: List<Screen>): String
+    fun generateCode(project: Project, component: ComponentInstance, allScreens: List<Screen>): String
     fun validateProperties(properties: Map<String, Any>): Boolean
 
     fun createDefaultProperties(counter: Int): Map<String, Any> {

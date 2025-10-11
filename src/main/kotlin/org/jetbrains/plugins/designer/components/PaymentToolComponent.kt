@@ -1,5 +1,7 @@
 package org.jetbrains.plugins.template.designer.components
 
+import com.intellij.openapi.project.Project
+import org.jetbrains.plugins.designer.codegen.TFIdentifierManager
 import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
@@ -36,16 +38,17 @@ object PaymentToolComponent : ComponentDefinition {
         }
     }
 
-    override fun generateCode(component: ComponentInstance, allScreens: List<Screen>): String {
+    override fun generateCode(project: Project, component: ComponentInstance, allScreens: List<Screen>): String {
         val props = component.properties
-        val identifier = props["identifier"] as? String ?: "PAYMENTTOOL"
-        val varName = identifier.lowercase().replace("_", "")
+        val identifierValue = props["identifier"] as? String ?: "PAYMENTTOOL"
+        val identifier = TFIdentifierManager.getOrCreateIdentifier(project, identifierValue)
+        val varName = identifierValue.lowercase().replace("_", "")
         val title = props["title"] as? String ?: "Select payment method"
         val paymentToolType = props["paymentToolType"] as? String ?: "Both"
         val required = props["required"] as? Boolean ?: true
 
         return buildString {
-            appendLine("        TFComponentPaymentToolSelection $varName = new TFComponentPaymentToolSelection(\"$identifier\");")
+            appendLine("        TFComponentPaymentToolSelection $varName = new TFComponentPaymentToolSelection($identifier);")
             appendLine("        $varName.setTitle(messages.getMessage(\"${title.lowercase().replace(" ", "_")}\"));")
             appendLine("        $varName.setPaymentToolType(TFPaymentToolType.$paymentToolType);")
             appendLine("        $varName.setContainerPlaceholder(messages.getMessage(\"account_selection_placeholder\"));")

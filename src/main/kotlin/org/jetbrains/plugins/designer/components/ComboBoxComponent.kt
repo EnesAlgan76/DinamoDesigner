@@ -1,5 +1,7 @@
 package org.jetbrains.plugins.template.designer.components
 
+import com.intellij.openapi.project.Project
+import org.jetbrains.plugins.designer.codegen.TFIdentifierManager
 import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
@@ -38,10 +40,11 @@ object ComboBoxComponent : ComponentDefinition {
         }
     }
 
-    override fun generateCode(component: ComponentInstance, allScreens: List<Screen>): String {
+    override fun generateCode(project: Project, component: ComponentInstance, allScreens: List<Screen>): String {
         val props = component.properties
-        val identifier = props["identifier"] as? String ?: "COMBOBOX"
-        val varName = identifier.lowercase().replace("_", "")
+        val identifierValue = props["identifier"] as? String ?: "COMBOBOX"
+        val identifier = TFIdentifierManager.getOrCreateIdentifier(project, identifierValue)
+        val varName = identifierValue.lowercase().replace("_", "")
         val title = props["title"] as? String ?: "Select option"
         val itemsStr = props["items"] as? String ?: ""
         val items = itemsStr.split(",").map { it.trim() }.filter { it.isNotEmpty() }
@@ -53,7 +56,7 @@ object ComboBoxComponent : ComponentDefinition {
         val informationTitle = props["informationTitle"] as? String ?: ""
 
         return buildString {
-            appendLine("        TFComponentComboBoxInput $varName = new TFComponentComboBoxInput(\"$identifier\");")
+            appendLine("        TFComponentComboBoxInput $varName = new TFComponentComboBoxInput($identifier);")
             appendLine("        $varName.setTitle(messages.getMessage(\"${title.lowercase().replace(" ", "_")}\"));")
 
             if (placeholder != "Please select") {
