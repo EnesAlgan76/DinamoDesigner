@@ -26,7 +26,7 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
     private var selectedComponent: ComponentInstance? = null
 
     init {
-        title = "Dinamo Multi Enes-Screen Designer"
+        title = "Dinamo Multi Enes2-Screen Designer"
         setSize(1400, 800)
         contentPane = createMainLayout()
         initializeDefaultScreen()
