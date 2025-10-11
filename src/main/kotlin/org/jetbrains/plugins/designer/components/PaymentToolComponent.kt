@@ -1,0 +1,77 @@
+package org.jetbrains.plugins.template.designer.components
+
+import org.jetbrains.plugins.designer.components.PropertyDescriptor
+import org.jetbrains.plugins.designer.models.ComponentInstance
+import org.jetbrains.plugins.designer.models.Screen
+import javax.swing.ImageIcon
+
+object PaymentToolComponent : ComponentDefinition {
+    override val type = "PAYMENT_TOOL"
+    override val displayName = "Payment Tool"
+
+    override val propertyDescriptors = listOf(
+        PropertyDescriptor.Text("identifier", "PAYMENTTOOL"),
+        PropertyDescriptor.Text("title", "Select payment method"),
+        PropertyDescriptor.Enum("paymentToolType", "Both",
+            listOf("Account", "CreditCard", "Both")),
+        PropertyDescriptor.Boolean("required", true),
+        PropertyDescriptor.Text("screenTitle", ""),
+        PropertyDescriptor.Text("screenInfo", "")
+    )
+
+    override fun getDisplayIcon(size: Int?): ImageIcon {
+        return try {
+            val resource = javaClass.getResource("/icons/paymenttool.png")
+                ?: throw IllegalArgumentException("Icon not found")
+
+            if (size != null) {
+                val originalIcon = ImageIcon(resource)
+                val scaledImage = originalIcon.image.getScaledInstance(size, size, java.awt.Image.SCALE_SMOOTH)
+                ImageIcon(scaledImage)
+            } else {
+                ImageIcon(resource)
+            }
+        } catch (e: Exception) {
+            ImageIcon()
+        }
+    }
+
+    override fun generateCode(component: ComponentInstance, allScreens: List<Screen>): String {
+        val props = component.properties
+        val identifier = props["identifier"] as? String ?: "PAYMENTTOOL"
+        val varName = identifier.lowercase().replace("_", "")
+        val title = props["title"] as? String ?: "Select payment method"
+        val paymentToolType = props["paymentToolType"] as? String ?: "Both"
+        val required = props["required"] as? Boolean ?: true
+
+        return buildString {
+            appendLine("        TFComponentPaymentToolSelection $varName = new TFComponentPaymentToolSelection(\"$identifier\");")
+            appendLine("        $varName.setTitle(messages.getMessage(\"${title.lowercase().replace(" ", "_")}\"));")
+            appendLine("        $varName.setPaymentToolType(TFPaymentToolType.$paymentToolType);")
+            appendLine("        $varName.setContainerPlaceholder(messages.getMessage(\"account_selection_placeholder\"));")
+
+            if (required) {
+                appendLine("        $varName.setValidation(true, messages.getMessage(\"${title.lowercase().replace(" ", "_")}_required_message\"));")
+            }
+
+            appendLine()
+            appendLine("        // TODO: Set accounts and credit cards")
+            appendLine("        // List<PZTAccount> accountList = AccountUtil.getDebtorAccounts(service, messages, true, false, MobileJointAccountType.Individual, adcIntegrationRestClient, isProtocolREST());")
+            appendLine("        // $varName.setAccounts(AccountUtil.convertAccountHashMap(accountList));")
+            appendLine()
+            appendLine("        // List<TFCreditCard> creditCards = CreditCardUtil.getCreditCardListForPayment(service, messages, PozitronCreditCardFunctionType.PaymentToolInstantWithBusiness, isProtocolREST(), adcIntegrationRestClient);")
+            appendLine("        // $varName.setCreditCards(CreditCardUtil.convertCreditCardHashMap(creditCards));")
+            appendLine()
+
+            appendLine("        rowViewModelList.add($varName);")
+        }
+    }
+
+    override fun validateProperties(properties: Map<String, Any>): Boolean {
+        val identifier = properties["identifier"] as? String ?: return false
+        val paymentToolType = properties["paymentToolType"] as? String ?: return false
+
+        return identifier.isNotBlank() &&
+                (paymentToolType == "Account" || paymentToolType == "CreditCard" || paymentToolType == "Both")
+    }
+}

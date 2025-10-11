@@ -1,0 +1,29 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>org.jetbrains.plugins.ifcounter</id>
+    <name>If Counter Plugin</name>
+    <vendor>Your Name</vendor>
+    <version>1.0</version>
+
+    <description><![CDATA[
+      Bu plugin açık olan Java sınıfındaki toplam if statement sayısını gösterir.
+      Güzel bir UI ile if sayısını tool window'da görebilirsiniz.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <resource-bundle>messages.MyBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow factoryClass="org.jetbrains.plugins.designer.MyToolWindowFactory"
+                    id="If Counter"
+                    anchor="right"
+                    secondary="true"/>
+        <postStartupActivity implementation="org.jetbrains.plugins.template.startup.MyProjectActivity" />
+
+        <projectService serviceImplementation="org.jetbrains.plugins.template.services.MyProjectService"/>
+    </extensions>
+
+
+</idea-plugin>
