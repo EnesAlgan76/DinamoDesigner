@@ -18,7 +18,6 @@ object CodeGenerator {
         code.append(generateGetPropertiesResponse(screens))
         code.append(generateGetActionResponse(screens))
 
-        // Generate screen-specific methods
         screens.forEach { screen ->
             when (screen.type) {
                 ScreenType.Form -> code.append(generateFormScreenMethods(screen, screens))
