@@ -22,216 +22,22 @@ import javax.swing.border.EmptyBorder
 class MyToolWindowFactory : ToolWindowFactory {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val myToolWindow = MyToolWindow(project)
-        val content = ContentFactory.getInstance().createContent(myToolWindow.getContent(), "If Analyzer", false)
+        // Only show main menu
+        val mainMenu = MainMenuWindow(project)
+        val content = ContentFactory.getInstance().createContent(mainMenu.getContent(), "", false)
         toolWindow.contentManager.addContent(content)
-
-        // Add Dinamo Designer tab
-        val dinamoWindow = DinamoToolWindow(project)
-        val dinamoContent = ContentFactory.getInstance().createContent(dinamoWindow.getContent(), "Dinamo Designer", false)
-        toolWindow.contentManager.addContent(dinamoContent)
     }
 
     override fun shouldBeAvailable(project: Project) = true
 
-    // Original If Analyzer Window
-    class MyToolWindow(private val project: Project) : MyProjectService.IfCounterListener {
 
-        private val myToolWindowContent: JPanel
-        private lateinit var countLabel: JBLabel
-        private lateinit var fileNameLabel: JBLabel
-        private lateinit var statusLabel: JBLabel
-        private lateinit var jsonTextArea: JTextArea
-        private lateinit var scrollPane: JBScrollPane
-        private val service = project.service<MyProjectService>()
-
-        init {
-            myToolWindowContent = JBPanel<JBPanel<*>>(BorderLayout()).apply {
-                border = EmptyBorder(JBUI.insets(10))
-                background = JBColor.PanelBackground
-            }
-
-            createUI()
-            service.addListener(this)
-            service.checkCurrentFile()
-        }
-
-        private fun createUI() {
-            val headerPanel = createHeaderPanel()
-            val contentPanel = createContentPanel()
-
-            myToolWindowContent.add(headerPanel, BorderLayout.NORTH)
-            myToolWindowContent.add(contentPanel, BorderLayout.CENTER)
-        }
-
-        private fun createHeaderPanel(): JPanel {
-            return JPanel(BorderLayout()).apply {
-                isOpaque = false
-                border = JBUI.Borders.empty(0, 0, 15, 0)
-
-                val titleLabel = JBLabel("If Statement Analyzer").apply {
-                    font = font.deriveFont(Font.BOLD, 16f)
-                    foreground = JBColor.foreground()
-                }
-
-                val iconLabel = JBLabel("📊").apply {
-                    font = font.deriveFont(20f)
-                }
-
-                add(iconLabel, BorderLayout.WEST)
-                add(titleLabel, BorderLayout.CENTER)
-                add(JSeparator(), BorderLayout.SOUTH)
-            }
-        }
-
-        private fun createContentPanel(): JPanel {
-            return JPanel(BorderLayout()).apply {
-                isOpaque = false
-                border = JBUI.Borders.empty(10)
-
-                val topPanel = createTopInfoPanel()
-                add(topPanel, BorderLayout.NORTH)
-
-                jsonTextArea = JTextArea().apply {
-                    font = Font("JetBrains Mono", Font.PLAIN, 12)
-                    isEditable = false
-                    background = JBColor.PanelBackground
-                    foreground = JBColor.foreground()
-                    lineWrap = false
-                    wrapStyleWord = false
-                    text = "// Open a Java file to see if-else structure"
-                }
-
-                scrollPane = JBScrollPane(jsonTextArea).apply {
-                    border = JBUI.Borders.customLine(JBColor.border(), 1)
-                    background = JBColor.PanelBackground
-                    viewport.background = JBColor.PanelBackground
-                    verticalScrollBarPolicy = JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
-                    horizontalScrollBarPolicy = JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED
-                }
-
-                add(scrollPane, BorderLayout.CENTER)
-
-                val bottomPanel = createBottomPanel()
-                add(bottomPanel, BorderLayout.SOUTH)
-            }
-        }
-
-        private fun createTopInfoPanel(): JPanel {
-            return JPanel(BorderLayout()).apply {
-                isOpaque = false
-                border = JBUI.Borders.empty(0, 0, 10, 0)
-
-                fileNameLabel = JBLabel(MyBundle.message("noFile")).apply {
-                    font = font.deriveFont(Font.BOLD, 14f)
-                    foreground = JBColor.foreground()
-                }
-
-                val countPanel = JPanel(FlowLayout(FlowLayout.CENTER)).apply {
-                    isOpaque = false
-
-                    countLabel = JBLabel("0").apply {
-                        font = font.deriveFont(Font.BOLD, 32f)
-                        foreground = JBColor.GRAY
-                    }
-
-                    val countText = JBLabel("if statements").apply {
-                        font = font.deriveFont(Font.PLAIN, 12f)
-                        foreground = JBColor.GRAY
-                    }
-
-                    add(countLabel)
-                    add(Box.createHorizontalStrut(10))
-                    add(countText)
-                }
-
-                statusLabel = JBLabel(MyBundle.message("openJavaFile")).apply {
-                    foreground = JBColor.GRAY
-                    horizontalAlignment = SwingConstants.CENTER
-                    font = font.deriveFont(Font.ITALIC, 12f)
-                }
-
-                add(fileNameLabel, BorderLayout.NORTH)
-                add(countPanel, BorderLayout.CENTER)
-                add(statusLabel, BorderLayout.SOUTH)
-            }
-        }
-
-        private fun createBottomPanel(): JPanel {
-            return JPanel(FlowLayout()).apply {
-                isOpaque = false
-                border = JBUI.Borders.empty(10, 0, 0, 0)
-
-                val refreshButton = JButton(MyBundle.message("refresh")).apply {
-                    addActionListener {
-                        service.checkCurrentFile()
-                    }
-                }
-
-                add(refreshButton)
-            }
-        }
-
-        override fun onIfStatementsChanged(statements: List<IfStatementInfo>, fileName: String) {
-            SwingUtilities.invokeLater {
-                countLabel.text = statements.size.toString()
-
-                if (fileName.isEmpty()) {
-                    fileNameLabel.text = MyBundle.message("noFile")
-                    statusLabel.text = MyBundle.message("openJavaFile")
-                    countLabel.foreground = JBColor.GRAY
-                    jsonTextArea.text = "// Open a Java file to see if-else structure"
-                } else {
-                    fileNameLabel.text = MyBundle.message("fileName", fileName)
-
-                    val maxNesting = statements.maxOfOrNull { it.nestingLevel } ?: 0
-                    val nestedCount = statements.count { it.nestingLevel > 0 }
-                    val elseCount = statements.count { it.isElse }
-
-                    when (statements.size) {
-                        0 -> {
-                            statusLabel.text = MyBundle.message("noIfs")
-                            countLabel.foreground = JBColor.GRAY
-                            jsonTextArea.text = "// $fileName\n\nNo if statements found"
-                        }
-                        1 -> {
-                            statusLabel.text = MyBundle.message("oneIf")
-                            countLabel.foreground = JBColor(Color(76, 175, 80), Color(76, 175, 80))
-                            jsonTextArea.text = service.generateJsonStructure()
-                        }
-                        else -> {
-                            val statusText = buildString {
-                                append("${statements.size} blocks")
-                                if (elseCount > 0) {
-                                    append(" (${elseCount} else)")
-                                }
-                                if (nestedCount > 0) {
-                                    append(" (${nestedCount} nested, max depth: ${maxNesting})")
-                                }
-                            }
-                            statusLabel.text = statusText
-                            countLabel.foreground = JBColor(Color(76, 175, 80), Color(76, 175, 80))
-                            jsonTextArea.text = service.generateJsonStructure()
-                        }
-                    }
-                }
-
-                jsonTextArea.caretPosition = 0
-            }
-        }
-
-        fun getContent(): JComponent = myToolWindowContent
-    }
-
-    // New Dinamo Designer Window
-    class DinamoToolWindow(private val project: Project) {
+    class MainMenuWindow(private val project: Project) {
 
         private val toolWindowContent: JPanel
 
         init {
             toolWindowContent = JBPanel<JBPanel<*>>(BorderLayout()).apply {
-                border = EmptyBorder(JBUI.insets(20))
-                background = JBColor.PanelBackground
+                background = JBColor(Color(250, 251, 252), Color(25, 27, 31))
             }
 
             createUI()
@@ -240,162 +46,154 @@ class MyToolWindowFactory : ToolWindowFactory {
         private fun createUI() {
             val mainPanel = JPanel(BorderLayout()).apply {
                 isOpaque = false
+                border = JBUI.Borders.empty(60, 40, 40, 40)
             }
 
-            // Header
-            val headerPanel = createHeaderPanel()
-            mainPanel.add(headerPanel, BorderLayout.NORTH)
+            // Center content with cards
+            val centerPanel = JPanel().apply {
+                layout = BoxLayout(this, BoxLayout.Y_AXIS)
+                isOpaque = false
 
-            // Content
-            val contentPanel = createContentPanel()
-            mainPanel.add(contentPanel, BorderLayout.CENTER)
+                // Logo/Title
+                val logoPanel = JPanel().apply {
+                    layout = BoxLayout(this, BoxLayout.Y_AXIS)
+                    isOpaque = false
+                    alignmentX = Component.CENTER_ALIGNMENT
 
+                    val iconLabel = JLabel("⚡").apply {
+                        font = font.deriveFont(72f)
+                        alignmentX = Component.CENTER_ALIGNMENT
+                    }
+
+                    val titleLabel = JBLabel("EA Suite").apply {
+                        font = Font("SF Pro Display", Font.BOLD, 32)
+                        foreground = JBColor(Color(30, 41, 59), Color(241, 245, 249))
+                        alignmentX = Component.CENTER_ALIGNMENT
+                    }
+
+                    add(iconLabel)
+                    add(Box.createVerticalStrut(16))
+                    add(titleLabel)
+                }
+
+                add(logoPanel)
+                add(Box.createVerticalStrut(60))
+
+                // Cards Grid
+                val cardsPanel = JPanel(GridLayout(2, 2, 24, 24)).apply {
+                    isOpaque = false
+                    maximumSize = Dimension(800, 500)
+                }
+
+                cardsPanel.add(createFeatureCard(
+                    "🎨",
+                    "Dinamo Designer",
+                    "Visual screen designer",
+                    Color(99, 102, 241)
+                ) {
+                    openDesigner()
+                })
+
+                cardsPanel.add(createFeatureCard(
+                    "📊",
+                    "If Counter",
+                    "Analyze code complexity",
+                    Color(139, 92, 246)
+                ) {
+                    openIfCounter()
+                })
+
+                cardsPanel.add(createFeatureCard(
+                    "🔧",
+                    "Coming Soon",
+                    "More tools on the way",
+                    Color(148, 163, 184)
+                ) {
+                    // Future feature
+                })
+
+                cardsPanel.add(createFeatureCard(
+                    "✨",
+                    "Coming Soon",
+                    "Stay tuned",
+                    Color(148, 163, 184)
+                ) {
+                    // Future feature
+                })
+
+                add(cardsPanel)
+            }
+
+            mainPanel.add(centerPanel, BorderLayout.CENTER)
             toolWindowContent.add(mainPanel, BorderLayout.CENTER)
         }
 
-        private fun createHeaderPanel(): JPanel {
-            return JPanel(BorderLayout()).apply {
-                isOpaque = false
-                border = JBUI.Borders.empty(0, 0, 20, 0)
-
-                val titlePanel = JPanel(FlowLayout(FlowLayout.LEFT)).apply {
-                    isOpaque = false
-
-                    val iconLabel = JLabel("🎨").apply {
-                        font = font.deriveFont(24f)
+        private fun createFeatureCard(emoji: String, title: String, subtitle: String, accentColor: Color, action: () -> Unit): JPanel {
+            return object : JPanel() {
+                private var isHovered = false
+                private var hoverProgress = 0f
+                private val animationTimer = Timer(16) {
+                    hoverProgress = if (isHovered) {
+                        minOf(hoverProgress + 0.15f, 1f)
+                    } else {
+                        maxOf(hoverProgress - 0.15f, 0f)
                     }
-
-                    val titleLabel = JBLabel("Dinamo Multi-Screen Designer").apply {
-                        font = font.deriveFont(Font.BOLD, 18f)
-                        foreground = JBColor.foreground()
+                    if ((isHovered && hoverProgress >= 1f) || (!isHovered && hoverProgress <= 0f)) {
+                        (it.source as Timer).stop()
                     }
-
-                    add(iconLabel)
-                    add(Box.createHorizontalStrut(10))
-                    add(titleLabel)
+                    repaint()
                 }
 
-                add(titlePanel, BorderLayout.WEST)
-                add(JSeparator(), BorderLayout.SOUTH)
-            }
-        }
-
-        private fun createContentPanel(): JPanel {
-            return JPanel(BorderLayout()).apply {
-                isOpaque = false
-
-                // Welcome message
-                val welcomePanel = JPanel().apply {
-                    layout = BoxLayout(this, BoxLayout.Y_AXIS)
-                    isOpaque = false
-                    border = JBUI.Borders.empty(40)
-
-                    val iconLabel = JLabel("📱").apply {
-                        font = font.deriveFont(80f)
-                        alignmentX = Component.CENTER_ALIGNMENT
-                    }
-
-                    val titleLabel = JBLabel("Welcome to Dinamo Designer").apply {
-                        font = font.deriveFont(Font.BOLD, 24f)
-                        foreground = JBColor.foreground()
-                        alignmentX = Component.CENTER_ALIGNMENT
-                    }
-
-                    val descLabel = JBLabel("<html><center>Design mobile screens visually and generate Java code<br>for your Dinamo components</center></html>").apply {
-                        font = font.deriveFont(Font.PLAIN, 14f)
-                        foreground = JBColor.GRAY
-                        alignmentX = Component.CENTER_ALIGNMENT
-                    }
-
-                    add(iconLabel)
-                    add(Box.createVerticalStrut(20))
-                    add(titleLabel)
-                    add(Box.createVerticalStrut(10))
-                    add(descLabel)
-                }
-
-                add(welcomePanel, BorderLayout.CENTER)
-
-                // Open Designer Button
-                val buttonPanel = JPanel(FlowLayout(FlowLayout.CENTER)).apply {
-                    isOpaque = false
-                    border = JBUI.Borders.empty(20, 0, 0, 0)
-
-                    val openDesignerButton = createStyledButton(
-                        "🚀 Open Designer",
-                        JBColor(Color(0, 123, 255), Color(0, 123, 255))
-                    ) {
-                        openDesigner()
-                    }
-
-
-                    add(openDesignerButton)
-                    add(Box.createHorizontalStrut(15))
-                }
-
-                add(buttonPanel, BorderLayout.SOUTH)
-
-                // Features list
-                val featuresPanel = createFeaturesPanel()
-                add(featuresPanel, BorderLayout.NORTH)
-            }
-        }
-
-        private fun createFeaturesPanel(): JPanel {
-            return JPanel().apply {
-                layout = BoxLayout(this, BoxLayout.Y_AXIS)
-                isOpaque = false
-                border = JBUI.Borders.empty(20, 40, 20, 40)
-
-                val featuresTitle = JBLabel("Features:").apply {
-                    font = font.deriveFont(Font.BOLD, 14f)
-                    foreground = JBColor.foreground()
-                    alignmentX = Component.LEFT_ALIGNMENT
-                }
-
-                add(featuresTitle)
-                add(Box.createVerticalStrut(15))
-
-                val features = listOf(
-                    "✨ Drag & Drop component library",
-                    "📱 Multi-screen management",
-                    "🔗 Navigation flow between screens",
-                    "⚙️ Component properties editor",
-                    "💻 Java code generation",
-                    "🎯 Visual screen flow diagram"
-                )
-
-                features.forEach { feature ->
-                    val featureLabel = JBLabel(feature).apply {
-                        font = font.deriveFont(Font.PLAIN, 13f)
-                        foreground = JBColor.GRAY
-                        alignmentX = Component.LEFT_ALIGNMENT
-                    }
-                    add(featureLabel)
-                    add(Box.createVerticalStrut(8))
-                }
-            }
-        }
-
-        private fun createStyledButton(text: String, bgColor: JBColor, action: () -> Unit): JButton {
-            return object : JButton(text) {
                 init {
-                    font = font.deriveFont(Font.BOLD, 14f)
-                    foreground = Color.WHITE
-                    background = bgColor
-                    isFocusPainted = false
-                    preferredSize = Dimension(200, 45)
+                    layout = BorderLayout()
+                    isOpaque = false
                     cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                    preferredSize = Dimension(360, 220)
 
-                    addActionListener { action() }
+                    val contentPanel = JPanel().apply {
+                        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+                        isOpaque = false
+                        border = JBUI.Borders.empty(32)
+
+                        val emojiLabel = JLabel(emoji).apply {
+                            font = font.deriveFont(56f)
+                            alignmentX = Component.CENTER_ALIGNMENT
+                        }
+
+                        val titleLabel = JBLabel(title).apply {
+                            font = Font("SF Pro Display", Font.BOLD, 22)
+                            foreground = JBColor(Color(30, 41, 59), Color(241, 245, 249))
+                            alignmentX = Component.CENTER_ALIGNMENT
+                        }
+
+                        val subtitleLabel = JBLabel(subtitle).apply {
+                            font = Font("SF Pro Display", Font.PLAIN, 14)
+                            foreground = JBColor(Color(100, 116, 139), Color(148, 163, 184))
+                            alignmentX = Component.CENTER_ALIGNMENT
+                        }
+
+                        add(emojiLabel)
+                        add(Box.createVerticalStrut(20))
+                        add(titleLabel)
+                        add(Box.createVerticalStrut(8))
+                        add(subtitleLabel)
+                    }
+
+                    add(contentPanel, BorderLayout.CENTER)
 
                     addMouseListener(object : MouseAdapter() {
+                        override fun mouseClicked(e: MouseEvent) {
+                            action()
+                        }
+
                         override fun mouseEntered(e: MouseEvent) {
-                            background = bgColor.brighter()
+                            isHovered = true
+                            animationTimer.start()
                         }
 
                         override fun mouseExited(e: MouseEvent) {
-                            background = bgColor
+                            isHovered = false
+                            animationTimer.start()
                         }
                     })
                 }
@@ -404,17 +202,34 @@ class MyToolWindowFactory : ToolWindowFactory {
                     val g2d = g as Graphics2D
                     g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
-                    // Shadow
-                    g2d.color = Color(0, 0, 0, 30)
-                    g2d.fillRoundRect(2, 2, width - 2, height - 2, 12, 12)
+                    // Shadow with hover effect
+                    val shadowAlpha = (15 + hoverProgress * 25).toInt()
+                    val shadowOffset = (4 + hoverProgress * 8).toInt()
+                    g2d.color = Color(0, 0, 0, shadowAlpha)
+                    g2d.fillRoundRect(shadowOffset, shadowOffset, width - shadowOffset, height - shadowOffset, 20, 20)
 
-                    // Button background
-                    g2d.color = background
-                    g2d.fillRoundRect(0, 0, width, height, 12, 12)
+                    // Card background
+                    val bgColor = if (accentColor == Color(148, 163, 184)) {
+                        JBColor(Color(255, 255, 255, 200), Color(40, 44, 52, 200))
+                    } else {
+                        JBColor(Color(255, 255, 255, 240), Color(40, 44, 52, 240))
+                    }
+                    g2d.color = bgColor
+                    g2d.fillRoundRect(0, 0, width, height, 20, 20)
 
-                    // Border
-                    g2d.color = Color(255, 255, 255, 80)
-                    g2d.drawRoundRect(0, 0, width - 1, height - 1, 12, 12)
+                    // Accent border with hover glow
+                    val borderAlpha = (100 + hoverProgress * 155).toInt()
+                    g2d.color = Color(accentColor.red, accentColor.green, accentColor.blue, borderAlpha)
+                    val strokeWidth = 2f + hoverProgress * 1f
+                    g2d.setStroke(BasicStroke(strokeWidth))
+                    g2d.drawRoundRect(1, 1, width - 3, height - 3, 20, 20)
+
+                    // Hover gradient overlay
+                    if (hoverProgress > 0) {
+                        val overlayAlpha = (hoverProgress * 40).toInt()
+                        g2d.color = Color(accentColor.red, accentColor.green, accentColor.blue, overlayAlpha)
+                        g2d.fillRoundRect(0, 0, width, height, 20, 20)
+                    }
 
                     super.paintComponent(g)
                 }
@@ -426,6 +241,16 @@ class MyToolWindowFactory : ToolWindowFactory {
                 val dialog = DinamoDesignerDialog(project)
                 dialog.isVisible = true
             }
+        }
+
+        private fun openIfCounter() {
+            // Open If Counter tool (can be implemented later)
+            JOptionPane.showMessageDialog(
+                toolWindowContent,
+                "If Counter feature - Coming soon!",
+                "Info",
+                JOptionPane.INFORMATION_MESSAGE
+            )
         }
 
         fun getContent(): JComponent = toolWindowContent
