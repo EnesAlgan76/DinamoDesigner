@@ -6,6 +6,7 @@ import com.intellij.util.ui.JBUI
 import org.jetbrains.plugins.designer.models.*
 import org.jetbrains.plugins.designer.codegen.CodeGenerator
 import org.jetbrains.plugins.designer.ui.panels.AddScreenDialog
+import org.jetbrains.plugins.designer.ui.panels.EditScreenDialog
 import org.jetbrains.plugins.template.designer.DesignPersistence
 import org.jetbrains.plugins.template.designer.ui.*
 import java.awt.*
@@ -40,7 +41,7 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             preferredSize = Dimension(1400, 800)
 
             val splitPane = JSplitPane(JSplitPane.HORIZONTAL_SPLIT).apply {
-                dividerLocation = 280
+                dividerLocation = 360
                 leftComponent = createLeftPanel()
                 rightComponent = createCenterAndRightPanel()
                 isContinuousLayout = true
@@ -54,14 +55,15 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
 
     private fun createLeftPanel(): JPanel {
         return GlassmorphicPanel().apply {
-            preferredSize = Dimension(280, 0)
+            preferredSize = Dimension(360, 0)
             border = JBUI.Borders.empty(15)
 
             // Screen List Panel
             screenListPanel = ScreenListPanel(
                 screenManager = screenManager,
                 onScreenSelected = { screen -> onScreenSelected(screen) },
-                onAddScreen = { showAddScreenDialog() }
+                onAddScreen = { showAddScreenDialog() },
+                onEditScreen = { screen -> showEditScreenDialog(screen) }
             )
             add(screenListPanel, BorderLayout.NORTH)
 
@@ -219,6 +221,35 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                     JOptionPane.showMessageDialog(
                         null,
                         "Error adding screen: ${e.message}",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE
+                    )
+                }
+            }
+        }
+    }
+
+    private fun showEditScreenDialog(screen: Screen) {
+        val dialog = EditScreenDialog(screen)
+
+        if (dialog.showAndGet()) {
+            val updatedScreen = dialog.getUpdatedScreen()
+
+            if (updatedScreen != null) {
+                try {
+                    screenManager.updateScreen(updatedScreen)
+                    screenListPanel.refreshScreenList()
+                    propertiesPanel.setAvailableScreens(screenManager.getAllScreens())
+
+                    // Refresh canvas if this is the selected screen
+                    if (screenManager.getSelectedScreen()?.id == updatedScreen.id) {
+                        canvasPanel.loadScreen(updatedScreen)
+                    }
+
+                } catch (e: Exception) {
+                    JOptionPane.showMessageDialog(
+                        null,
+                        "Error updating screen: ${e.message}",
                         "Error",
                         JOptionPane.ERROR_MESSAGE
                     )

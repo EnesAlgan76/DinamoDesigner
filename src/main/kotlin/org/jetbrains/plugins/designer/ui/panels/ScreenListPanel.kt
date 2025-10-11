@@ -12,7 +12,8 @@ import javax.swing.*
 class ScreenListPanel(
     private val screenManager: ScreenManager,
     private val onScreenSelected: (Screen) -> Unit,
-    private val onAddScreen: () -> Unit
+    private val onAddScreen: () -> Unit,
+    private val onEditScreen: (Screen) -> Unit
 ) : JPanel(BorderLayout()) {
 
     private val screenItemsContainer = JPanel().apply {
@@ -117,6 +118,33 @@ class ScreenListPanel(
                 }
 
                 add(textPanel, BorderLayout.CENTER)
+
+                val settingsButton = JButton("⚙").apply {
+                    font = Font("SF Pro Display", Font.PLAIN, 28)
+                    preferredSize = Dimension(48, 48)
+                    isOpaque = false
+                    isBorderPainted = false
+                    isContentAreaFilled = false
+                    isFocusPainted = false
+                    cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                    foreground = if (isSelected) Color(230, 230, 230) else JBColor(Color(100, 116, 139), Color(148, 163, 184))
+
+                    addMouseListener(object : MouseAdapter() {
+                        override fun mouseEntered(e: MouseEvent) {
+                            foreground = if (isSelected) Color.WHITE else JBColor(Color(30, 41, 59), Color(241, 245, 249))
+                        }
+
+                        override fun mouseExited(e: MouseEvent) {
+                            foreground = if (isSelected) Color(230, 230, 230) else JBColor(Color(100, 116, 139), Color(148, 163, 184))
+                        }
+                    })
+
+                    addActionListener {
+                        onEditScreen(screen)
+                    }
+                }
+
+                add(settingsButton, BorderLayout.EAST)
 
                 addMouseListener(object : MouseAdapter() {
                     override fun mouseClicked(e: MouseEvent) {

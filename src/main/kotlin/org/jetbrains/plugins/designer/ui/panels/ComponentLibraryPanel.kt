@@ -17,7 +17,7 @@ class ComponentLibraryPanel : JPanel() {
         isOpaque = false
 
         val titleLabel = StyledLabel("Component Library", 16, Font.BOLD).apply {
-            alignmentX = Component.LEFT_ALIGNMENT
+            alignmentX = Component.CENTER_ALIGNMENT
         }
         add(titleLabel)
         add(Box.createVerticalStrut(15))

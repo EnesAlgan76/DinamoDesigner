@@ -63,4 +63,12 @@ class ScreenManager {
     fun getScreensByType(type: ScreenType): List<Screen> {
         return screens.filter { it.type == type }
     }
+
+    fun updateScreen(updatedScreen: Screen): Boolean {
+        val index = screens.indexOfFirst { it.id == updatedScreen.id }
+        if (index == -1) return false
+
+        screens[index] = updatedScreen
+        return true
+    }
 }
