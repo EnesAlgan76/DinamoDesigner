@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.wm.impl.welcomeScreen.learnIde.coursesInProgress.mainBackgroundColor
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import org.jetbrains.plugins.designer.models.*
@@ -16,6 +17,9 @@ import org.jetbrains.plugins.template.designer.DesignPersistence
 import org.jetbrains.plugins.template.designer.ui.*
 import java.awt.*
 import javax.swing.*
+import javax.swing.plaf.basic.BasicSplitPaneDivider
+import javax.swing.plaf.basic.BasicSplitPaneUI
+import kotlin.apply
 
 class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
 
@@ -34,6 +38,7 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
     init {
         title = "Dinamo Multi Enes2-Screen Designer"
         setSize(1400, 800)
+        contentPane.background = Color(0, 0, 255)
         contentPane = createMainLayout()
         initializeDefaultScreen()
     }
@@ -52,6 +57,18 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                 isContinuousLayout = true
                 isOpaque = false
                 border = null
+                dividerSize = 1
+
+                ui = object : BasicSplitPaneUI() {
+                    override fun createDefaultDivider(): BasicSplitPaneDivider {
+                        return object : BasicSplitPaneDivider(this) {
+                            override fun paint(g: Graphics) {
+                                g.color = Color(60, 63, 65) 
+                                g.fillRect(0, 0, size.width, size.height)
+                            }
+                        }
+                    }
+                }
             }
 
             add(splitPane, BorderLayout.CENTER)
@@ -92,6 +109,18 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             isContinuousLayout = true
             isOpaque = false
             border = null
+            dividerSize = 1
+
+            ui = object : BasicSplitPaneUI() {
+                override fun createDefaultDivider(): BasicSplitPaneDivider {
+                    return object : BasicSplitPaneDivider(this) {
+                        override fun paint(g: Graphics) {
+                            g.color = Color(60, 63, 65)
+                            g.fillRect(0, 0, size.width, size.height)
+                        }
+                    }
+                }
+            }
         }
     }
 
