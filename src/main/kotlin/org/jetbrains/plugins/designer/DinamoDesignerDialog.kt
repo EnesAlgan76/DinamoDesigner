@@ -6,6 +6,8 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.impl.welcomeScreen.learnIde.coursesInProgress.mainBackgroundColor
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import org.jetbrains.plugins.designer.models.*
@@ -384,8 +386,20 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                 val document = selectedEditor.document
 
                 WriteCommandAction.runWriteCommandAction(project) {
-                    // Clear the document and write new code
                     document.setText(code)
+
+                    val psiDocumentManager = PsiDocumentManager.getInstance(project)
+                    psiDocumentManager.commitDocument(document)
+
+                    val psiFile = psiDocumentManager.getPsiFile(document)
+                    if (psiFile != null) {
+                        try {
+                            val codeStyleManager = JavaCodeStyleManager.getInstance(project)
+                            codeStyleManager.optimizeImports(psiFile)
+                            codeStyleManager.shortenClassReferences(psiFile)
+                        } catch (e: Exception) {
+                        }
+                    }
                 }
 
                 // Show notification
