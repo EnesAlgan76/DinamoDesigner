@@ -14,6 +14,7 @@ class PluginSettings : PersistentStateComponent<PluginSettings.State> {
 
     data class State(
         var tfIdentifierPath: String = "src/com/pozitron/turkiyefinans/core/TFIdentifier.java",
+        var tfMessagesPath: String = "src/com/pozitron/turkiyefinans/core/messages/messages_tr.properties",
         var autoWriteToEditor: Boolean = false
     )
 
@@ -27,6 +28,12 @@ class PluginSettings : PersistentStateComponent<PluginSettings.State> {
         get() = myState.tfIdentifierPath
         set(value) {
             myState.tfIdentifierPath = value
+        }
+
+    var tfMessagesPath: String
+        get() = myState.tfMessagesPath
+        set(value) {
+            myState.tfMessagesPath = value
         }
 
     var autoWriteToEditor: Boolean

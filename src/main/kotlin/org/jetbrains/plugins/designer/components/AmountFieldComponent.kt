@@ -2,6 +2,7 @@ package org.jetbrains.plugins.designer.components
 
 import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.designer.codegen.TFIdentifierManager
+import org.jetbrains.plugins.designer.codegen.TFMessagesManager
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
 import org.jetbrains.plugins.template.designer.components.ComponentDefinition
@@ -49,13 +50,15 @@ object AmountFieldComponent : ComponentDefinition {
 
         return buildString {
             appendLine("        TFComponentAmountTextFieldInput $varName = new TFComponentAmountTextFieldInput($identifier);")
-            appendLine("        $varName.setTitle(messages.getMessage(\"${title.lowercase().replace(" ", "_")}\"));")
+            val titleMessage = TFMessagesManager.getOrCreateMessage(project, title)
+            appendLine("        $varName.setTitle($titleMessage);")
             appendLine("        $varName.setCurrencyCode(CurrencyType._$currencyCode);")
             if (hideFraction) {
                 appendLine("        $varName.setHideFraction(true);")
             }
             if (required) {
-                appendLine("        $varName.setValidation(true, messages.getMessage(\"${title.lowercase().replace(" ", "_")}_required_message\"));")
+                val requiredMessage = TFMessagesManager.getOrCreateMessage(project, "${title} is required")
+                appendLine("        $varName.setValidation(true, $requiredMessage);")
             }
             appendLine("        rowViewModelList.add($varName);")
         }

@@ -2,6 +2,7 @@ package org.jetbrains.plugins.designer
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.impl.welcomeScreen.learnIde.coursesInProgress.mainBackgroundColor
@@ -63,7 +64,7 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                     override fun createDefaultDivider(): BasicSplitPaneDivider {
                         return object : BasicSplitPaneDivider(this) {
                             override fun paint(g: Graphics) {
-                                g.color = Color(60, 63, 65) 
+                                g.color = Color(60, 63, 65)
                                 g.fillRect(0, 0, size.width, size.height)
                             }
                         }
@@ -344,16 +345,34 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             return "// No screens to generate. Please add screens first."
         }
 
-        val code = CodeGenerator.generateFullFlowCode(project, "TFGeneratedFlow", screens)
+        // Get the flow name from the active editor file
+        val flowName = getFlowNameFromActiveEditor()
+
+        val code = CodeGenerator.generateFullFlowCode(project, flowName, screens)
         codePreviewPanel.updateCode(code)
 
-        // Check if auto-write is enabled
         val settings = PluginSettings.getInstance(project)
         if (settings.autoWriteToEditor) {
             writeCodeToActiveEditor(code)
         }
 
         return code
+    }
+
+    private fun getFlowNameFromActiveEditor(): String {
+        val editorManager = FileEditorManager.getInstance(project)
+        val selectedEditor = editorManager.selectedTextEditor
+
+        if (selectedEditor != null) {
+            val virtualFile = FileDocumentManager.getInstance().getFile(selectedEditor.document)
+            if (virtualFile != null) {
+                val fileName = virtualFile.nameWithoutExtension
+                if (fileName.isNotEmpty()) {
+                    return fileName
+                }
+            }
+        }
+        return "TFGeneratedFlow"
     }
 
     private fun writeCodeToActiveEditor(code: String) {

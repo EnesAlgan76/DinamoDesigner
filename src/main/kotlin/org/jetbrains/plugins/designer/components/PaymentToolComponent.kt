@@ -2,6 +2,7 @@ package org.jetbrains.plugins.template.designer.components
 
 import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.designer.codegen.TFIdentifierManager
+import org.jetbrains.plugins.designer.codegen.TFMessagesManager
 import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
@@ -49,12 +50,15 @@ object PaymentToolComponent : ComponentDefinition {
 
         return buildString {
             appendLine("        TFComponentPaymentToolSelection $varName = new TFComponentPaymentToolSelection($identifier);")
-            appendLine("        $varName.setTitle(messages.getMessage(\"${title.lowercase().replace(" ", "_")}\"));")
+            val titleMessage = TFMessagesManager.getOrCreateMessage(project, title)
+            appendLine("        $varName.setTitle($titleMessage);")
             appendLine("        $varName.setPaymentToolType(TFPaymentToolType.$paymentToolType);")
-            appendLine("        $varName.setContainerPlaceholder(messages.getMessage(\"account_selection_placeholder\"));")
+            val placeholderMessage = TFMessagesManager.getOrCreateMessage(project, "Account selection placeholder")
+            appendLine("        $varName.setContainerPlaceholder($placeholderMessage);")
 
             if (required) {
-                appendLine("        $varName.setValidation(true, messages.getMessage(\"${title.lowercase().replace(" ", "_")}_required_message\"));")
+                val requiredMessage = TFMessagesManager.getOrCreateMessage(project, "${title} is required")
+                appendLine("        $varName.setValidation(true, $requiredMessage);")
             }
 
             appendLine()

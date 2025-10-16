@@ -2,6 +2,7 @@ package org.jetbrains.plugins.template.designer.components
 
 import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.designer.codegen.TFIdentifierManager
+import org.jetbrains.plugins.designer.codegen.TFMessagesManager
 import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
@@ -46,7 +47,8 @@ object DatePickerComponent : ComponentDefinition {
 
         return buildString {
             appendLine("        TFComponentDateInput $varName = new TFComponentDateInput($identifier);")
-            appendLine("        $varName.setTitle(messages.getMessage(\"${title.lowercase().replace(" ", "_")}\"));")
+            val titleMessage = TFMessagesManager.getOrCreateMessage(project, title)
+            appendLine("        $varName.setTitle($titleMessage);")
             if (validation) {
                 appendLine("        $varName.setValidation(true);")
             }

@@ -2,6 +2,7 @@ package org.jetbrains.plugins.template.designer.components
 
 import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.designer.codegen.TFIdentifierManager
+import org.jetbrains.plugins.designer.codegen.TFMessagesManager
 import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
@@ -45,7 +46,8 @@ object ButtonComponent : ComponentDefinition {
 
         return buildString {
             appendLine("        TFComponentButton $varName = new TFComponentButton($identifier);")
-            appendLine("        $varName.setText(messages.getMessage(\"${text.lowercase().replace(" ", "_")}\"));")
+            val messageCall = TFMessagesManager.getOrCreateMessage(project, text)
+            appendLine("        $varName.setText($messageCall);")
 
             if (!targetScreenId.isNullOrEmpty()) {
                 val targetScreen = allScreens.find { it.id == targetScreenId }

@@ -2,6 +2,7 @@ package org.jetbrains.plugins.template.designer.components
 
 import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.designer.codegen.TFIdentifierManager
+import org.jetbrains.plugins.designer.codegen.TFMessagesManager
 import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
@@ -61,7 +62,8 @@ object TextFieldComponent : ComponentDefinition {
 
         return buildString {
             appendLine("        TFComponentTextFieldInput $varName = new TFComponentTextFieldInput($identifier);")
-            appendLine("        $varName.setTitle(messages.getMessage(\"${title.lowercase().replace(" ", "_")}\"));")
+            val titleMessage = TFMessagesManager.getOrCreateMessage(project, title)
+            appendLine("        $varName.setTitle($titleMessage);")
             appendLine("        $varName.setMaxLength($maxLength);")
 
             if (textType != "AlphaNumeric") {
@@ -77,11 +79,13 @@ object TextFieldComponent : ComponentDefinition {
             }
 
             if (informationString.isNotEmpty()) {
-                appendLine("        $varName.setInformationString(messages.getMessage(\"${informationString.lowercase().replace(" ", "_")}\"));")
+                val infoStringMessage = TFMessagesManager.getOrCreateMessage(project, informationString)
+                appendLine("        $varName.setInformationString($infoStringMessage);")
             }
 
             if (informationTitle.isNotEmpty()) {
-                appendLine("        $varName.setInformationTitle(messages.getMessage(\"${informationTitle.lowercase().replace(" ", "_")}\"));")
+                val infoTitleMessage = TFMessagesManager.getOrCreateMessage(project, informationTitle)
+                appendLine("        $varName.setInformationTitle($infoTitleMessage);")
             }
 
             if (disable) {
@@ -89,7 +93,8 @@ object TextFieldComponent : ComponentDefinition {
             }
 
             if (required) {
-                appendLine("        $varName.setValidation(true, messages.getMessage(\"${title.lowercase().replace(" ", "_")}_required_message\"));")
+                val requiredMessage = TFMessagesManager.getOrCreateMessage(project, "${title} is required")
+                appendLine("        $varName.setValidation(true, $requiredMessage);")
             }
 
             appendLine("        rowViewModelList.add($varName);")

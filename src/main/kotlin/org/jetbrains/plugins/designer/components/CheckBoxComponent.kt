@@ -2,6 +2,7 @@ package org.jetbrains.plugins.template.designer.components
 
 import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.designer.codegen.TFIdentifierManager
+import org.jetbrains.plugins.designer.codegen.TFMessagesManager
 import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
@@ -63,32 +64,41 @@ object CheckBoxComponent : ComponentDefinition {
 
         return buildString {
             appendLine("        TFComponentCheckBox $varName = new TFComponentCheckBox($identifier);")
-            appendLine("        $varName.setText(messages.getMessage(\"${text.lowercase().replace(" ", "_")}\"));")
+            val textMessage = TFMessagesManager.getOrCreateMessage(project, text)
+            appendLine("        $varName.setText($textMessage);")
 
             if (underlineText.isNotEmpty()) {
-                appendLine("        $varName.setUnderlineText(messages.getMessage(\"${underlineText.lowercase().replace(" ", "_")}\"));")
+                val underlineMessage = TFMessagesManager.getOrCreateMessage(project, underlineText)
+                appendLine("        $varName.setUnderlineText($underlineMessage);")
             }
 
             if (descriptionText.isNotEmpty()) {
-                appendLine("        $varName.setDescriptionText(messages.getMessage(\"${descriptionText.lowercase().replace(" ", "_")}\"));")
+                val descriptionMessage = TFMessagesManager.getOrCreateMessage(project, descriptionText)
+                appendLine("        $varName.setDescriptionText($descriptionMessage);")
             }
 
             appendLine("        $varName.setChecked($checked);")
 
             if (showPopUp) {
                 appendLine("        $varName.setShowPopUp(true);")
-                appendLine("        $varName.setPopUpTitle(messages.getMessage(\"${popUpTitle.lowercase().replace(" ", "_")}\"));")
-                appendLine("        $varName.setInformationMessage(messages.getMessage(\"${popUpText.lowercase().replace(" ", "_")}\"));")
-                appendLine("        $varName.setContinueButton(messages.getMessage(\"${continueButton.lowercase().replace(" ", "_")}\"));")
-                appendLine("        $varName.setCancelButton(messages.getMessage(\"${cancelButton.lowercase().replace(" ", "_")}\"));")
+                val popUpTitleMessage = TFMessagesManager.getOrCreateMessage(project, popUpTitle)
+                appendLine("        $varName.setPopUpTitle($popUpTitleMessage);")
+                val popUpTextMessage = TFMessagesManager.getOrCreateMessage(project, popUpText)
+                appendLine("        $varName.setInformationMessage($popUpTextMessage);")
+                val continueButtonMessage = TFMessagesManager.getOrCreateMessage(project, continueButton)
+                appendLine("        $varName.setContinueButton($continueButtonMessage);")
+                val cancelButtonMessage = TFMessagesManager.getOrCreateMessage(project, cancelButton)
+                appendLine("        $varName.setCancelButton($cancelButtonMessage);")
             }
 
             if (informationString.isNotEmpty()) {
-                appendLine("        $varName.setInformationString(messages.getMessage(\"${informationString.lowercase().replace(" ", "_")}\"));")
+                val infoStringMessage = TFMessagesManager.getOrCreateMessage(project, informationString)
+                appendLine("        $varName.setInformationString($infoStringMessage);")
             }
 
             if (informationAlertTitle.isNotEmpty()) {
-                appendLine("        $varName.setInformationAlertTitle(messages.getMessage(\"${informationAlertTitle.lowercase().replace(" ", "_")}\"));")
+                val infoAlertMessage = TFMessagesManager.getOrCreateMessage(project, informationAlertTitle)
+                appendLine("        $varName.setInformationAlertTitle($infoAlertMessage);")
             }
 
             appendLine("        rowViewModelList.add($varName);")
