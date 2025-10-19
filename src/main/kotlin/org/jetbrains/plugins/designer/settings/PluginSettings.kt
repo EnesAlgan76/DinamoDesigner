@@ -15,7 +15,9 @@ class PluginSettings : PersistentStateComponent<PluginSettings.State> {
     data class State(
         var tfIdentifierPath: String = "src/com/pozitron/turkiyefinans/core/TFIdentifier.java",
         var tfMessagesPath: String = "src/com/pozitron/turkiyefinans/core/messages/messages_tr.properties",
-        var autoWriteToEditor: Boolean = false
+        var screenActionImplPath: String = "src/com/pozitron/turkiyefinans/actions/screen/action/ScreenActionImpl.java",
+        var autoWriteToEditor: Boolean = false,
+        var autoUpdateScreenAction: Boolean = true
     )
 
     override fun getState(): State = myState
@@ -36,10 +38,22 @@ class PluginSettings : PersistentStateComponent<PluginSettings.State> {
             myState.tfMessagesPath = value
         }
 
+    var screenActionImplPath: String
+        get() = myState.screenActionImplPath
+        set(value) {
+            myState.screenActionImplPath = value
+        }
+
     var autoWriteToEditor: Boolean
         get() = myState.autoWriteToEditor
         set(value) {
             myState.autoWriteToEditor = value
+        }
+
+    var autoUpdateScreenAction: Boolean
+        get() = myState.autoUpdateScreenAction
+        set(value) {
+            myState.autoUpdateScreenAction = value
         }
 
     companion object {

@@ -7,22 +7,46 @@ import java.awt.Dimension
 import java.util.*
 import javax.swing.*
 
-class AddScreenDialog : DialogWrapper(true) {
+class AddScreenDialog(private val existingScreens: List<Screen> = emptyList()) : DialogWrapper(true) {
 
     private val nameField = JTextField()
     private val typeComboBox = JComboBox(ScreenType.values())
     private val descriptionField = JTextField()
     private val isEntryScreenCheckBox = JCheckBox("Entry Screen", false)
+    private val nextScreenComboBox = JComboBox<String>()
 
     init {
         title = "Add New Screen"
+        updateNextScreenOptions()
+
+        // Screen Type değiştiğinde Next Screen seçeneklerini güncelle
+        typeComboBox.addActionListener {
+            updateNextScreenOptions()
+        }
+
         init()
+    }
+
+    private fun updateNextScreenOptions() {
+        nextScreenComboBox.removeAllItems()
+        nextScreenComboBox.addItem("-- None --")
+
+        val selectedType = typeComboBox.selectedItem as? ScreenType
+
+        // Sadece Form ekranlar için next screen seçeneği göster
+        if (selectedType == ScreenType.Form) {
+            existingScreens.forEach { screen ->
+                nextScreenComboBox.addItem("${screen.name} (${screen.type})")
+            }
+        }
+
+        nextScreenComboBox.isEnabled = selectedType == ScreenType.Form
     }
 
     override fun createCenterPanel(): JComponent {
         val panel = JPanel()
         panel.layout = BoxLayout(panel, BoxLayout.Y_AXIS)
-        panel.preferredSize = Dimension(400, 250)
+        panel.preferredSize = Dimension(400, 320)
 
         panel.add(JLabel("Screen Name:"))
         nameField.preferredSize = Dimension(380, 30)
@@ -37,6 +61,12 @@ class AddScreenDialog : DialogWrapper(true) {
         panel.add(JLabel("Description:"))
         descriptionField.preferredSize = Dimension(380, 30)
         panel.add(descriptionField)
+        panel.add(Box.createVerticalStrut(10))
+
+        // Next Screen seçeneği (sadece Form ekranlar için)
+        panel.add(JLabel("Next Screen (Form Only):"))
+        nextScreenComboBox.preferredSize = Dimension(380, 30)
+        panel.add(nextScreenComboBox)
         panel.add(Box.createVerticalStrut(10))
 
         val checkBoxPanel = JPanel()
@@ -66,12 +96,21 @@ class AddScreenDialog : DialogWrapper(true) {
             return null
         }
 
+        // Next Screen seçimini al (sadece Form ekranlar için)
+        val nextScreenId = if (type == ScreenType.Form && nextScreenComboBox.selectedIndex > 0) {
+            val selectedIndex = nextScreenComboBox.selectedIndex - 1  // "-- None --" offset'i
+            existingScreens.getOrNull(selectedIndex)?.id
+        } else {
+            null
+        }
+
         return Screen(
             id = UUID.randomUUID().toString(),
             name = name,
             type = type,
             description = description.ifEmpty { name },
-            isEntryScreen = isEntryScreen
+            isEntryScreen = isEntryScreen,
+            nextScreenId = nextScreenId
         )
     }
 }

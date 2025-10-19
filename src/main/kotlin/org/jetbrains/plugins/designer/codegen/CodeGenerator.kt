@@ -35,6 +35,57 @@ object CodeGenerator {
         return code.toString()
     }
 
+    /**
+     * ScreenActionImpl.java için else-if bloğu üretir
+     * Bu kod bloğu ScreenActionImpl.java dosyasına manuel olarak eklenmelidir
+     */
+    fun generateScreenActionImplBlock(project: Project, className: String, screens: List<Screen>): String {
+        if (screens.isEmpty()) {
+            return "// No screens to generate"
+        }
+
+        val code = StringBuilder()
+
+        val allIdentifiers = mutableListOf<String>()
+
+        // Tüm screen identifierlarını topla
+        screens.forEach { screen ->
+            val screenIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, screen.name)
+
+            when (screen.type) {
+                ScreenType.Form -> {
+                    allIdentifiers.add("identifier.equals(TFScreenType.Form + $screenIdentifier)")
+                }
+                ScreenType.Confirm -> {
+                    allIdentifiers.add("identifier.equals(TFScreenType.Confirm + $screenIdentifier)")
+                }
+                ScreenType.Success -> {
+                    allIdentifiers.add("identifier.equals(TFScreenType.Success + $screenIdentifier)")
+                }
+                else -> {
+                    allIdentifiers.add("identifier.equals($screenIdentifier)")
+                }
+            }
+        }
+
+        // Entry screen identifier'ı da ekle
+        val entryScreen = screens.find { it.isEntryScreen }
+        if (entryScreen != null) {
+            val entryIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, entryScreen.name)
+            if (!allIdentifiers.contains("identifier.equals($entryIdentifier)")) {
+                allIdentifiers.add(0, "identifier.equals($entryIdentifier)")
+            }
+        }
+
+        // else if bloğunu oluştur
+        code.append("else if (")
+        code.append(allIdentifiers.joinToString(" ||\n                "))
+        code.append(") {\n\n")
+        code.append("    flow = new $className();\n\n")
+
+        return code.toString()
+    }
+
     // ========== CLASS STRUCTURE ==========
 
     private fun generateClassHeader(className: String): String {
@@ -238,27 +289,62 @@ public class $className extends TFBaseFlow {
 
 """.trimIndent())
 
-        // Group screens by flow (Form -> Confirm -> Success)
-        val flows = groupScreensByFlow(screens)
         var isFirst = true
+
+        screens.filter { it.type == ScreenType.Form && it.nextScreenId != null }.forEach { formScreen ->
+            val nextScreen = screens.find { it.id == formScreen.nextScreenId }
+            if (nextScreen != null) {
+                val condition = if (isFirst) "if" else "} else if"
+                isFirst = false
+
+                val formIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, formScreen.name)
+                val nextIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, nextScreen.name)
+
+                code.append("\n        $condition (request.getIdentifier().equals(TFScreenType.Form + $formIdentifier)) {\n")
+                code.append("            // Default continue button transition\n")
+                code.append("            validate${formScreen.name}(request);\n\n")
+                code.append("            identifier = $nextIdentifier;\n")
+                code.append("            screenType = TFScreenType.${nextScreen.type};\n")
+
+                when (nextScreen.type) {
+                    ScreenType.Form -> {
+                        code.append("            properties.put(TFIdentifier.TITLE, messages.getMessage(\"${nextScreen.name.lowercase()}_title\"));\n")
+                        code.append("            properties.put(TFIdentifier.INPUTS, get${nextScreen.name}Inputs(cachedUtil, service, messages));\n")
+                        code.append("            ThemeUtil.configureFormProperties(getThemeValue(), properties, Util.getNavigationBarContinueButton());\n")
+                    }
+                    ScreenType.Confirm -> {
+                        code.append("            properties = get${nextScreen.name}Properties(service, messages, request);\n")
+                        code.append("            ThemeUtil.configureFormProperties(getThemeValue(), properties, Util.getNavigationBarContinueButton());\n")
+                    }
+                    else -> {
+                        code.append("            properties = get${nextScreen.name}Properties(service, messages);\n")
+                    }
+                }
+                code.append("        ")
+            }
+        }
+
+        // 2. Sonra conventional flow-based transitions (Form -> Confirm -> Success)
+        val flows = groupScreensByFlow(screens)
 
         flows.forEach { (baseName, flowScreens) ->
             val formScreen = flowScreens.find { it.type == ScreenType.Form }
             val confirmScreen = flowScreens.find { it.type == ScreenType.Confirm }
             val successScreen = flowScreens.find { it.type == ScreenType.Success }
 
-            // Form -> Confirm transition
-            if (formScreen != null && confirmScreen != null) {
+            if (formScreen != null && confirmScreen != null && formScreen.nextScreenId == null) {
                 val condition = if (isFirst) "if" else "} else if"
                 isFirst = false
                 val formIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, formScreen.name)
                 val confirmIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, confirmScreen.name)
 
                 code.append("\n        $condition (request.getIdentifier().equals(TFScreenType.Form + $formIdentifier)) {\n")
+                code.append("            // Conventional flow: Form -> Confirm\n")
                 code.append("            validate${formScreen.name}(request);\n\n")
                 code.append("            identifier = $confirmIdentifier;\n")
                 code.append("            screenType = TFScreenType.Confirm;\n")
                 code.append("            properties = get${confirmScreen.name}Properties(service, messages, request);\n")
+                code.append("            ThemeUtil.configureFormProperties(getThemeValue(), properties, Util.getNavigationBarContinueButton());\n")
                 code.append("        ")
             }
 

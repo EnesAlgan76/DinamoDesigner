@@ -6,23 +6,58 @@ import org.jetbrains.plugins.designer.models.ScreenType
 import java.awt.Dimension
 import javax.swing.*
 
-class EditScreenDialog(private val screen: Screen) : DialogWrapper(true) {
+class EditScreenDialog(
+    private val screen: Screen,
+    private val existingScreens: List<Screen> = emptyList()
+) : DialogWrapper(true) {
 
     private val nameField = JTextField(screen.name)
     private val typeComboBox = JComboBox(ScreenType.values())
     private val descriptionField = JTextField(screen.description)
     private val isEntryScreenCheckBox = JCheckBox("Entry Screen", screen.isEntryScreen)
+    private val nextScreenComboBox = JComboBox<String>()
 
     init {
         title = "Edit Screen"
         typeComboBox.selectedItem = screen.type
+        updateNextScreenOptions()
+
+        // Mevcut next screen'i seç
+        screen.nextScreenId?.let { nextId ->
+            val index = existingScreens.indexOfFirst { it.id == nextId }
+            if (index >= 0) {
+                nextScreenComboBox.selectedIndex = index  // +1 for "-- None --" option
+            }
+        }
+
+        // Screen Type değiştiğinde Next Screen seçeneklerini güncelle
+        typeComboBox.addActionListener {
+            updateNextScreenOptions()
+        }
+
         init()
+    }
+
+    private fun updateNextScreenOptions() {
+        nextScreenComboBox.removeAllItems()
+        nextScreenComboBox.addItem("-- None --")
+
+        val selectedType = typeComboBox.selectedItem as? ScreenType
+
+        // Sadece Form ekranlar için next screen seçeneği göster
+        if (selectedType == ScreenType.Form) {
+            existingScreens.filter { it.id != screen.id }.forEach { otherScreen ->
+                nextScreenComboBox.addItem("${otherScreen.name} (${otherScreen.type})")
+            }
+        }
+
+        nextScreenComboBox.isEnabled = selectedType == ScreenType.Form
     }
 
     override fun createCenterPanel(): JComponent {
         val panel = JPanel()
         panel.layout = BoxLayout(panel, BoxLayout.Y_AXIS)
-        panel.preferredSize = Dimension(400, 250)
+        panel.preferredSize = Dimension(400, 320)
 
         panel.add(JLabel("Screen Name:"))
         nameField.preferredSize = Dimension(380, 30)
@@ -37,6 +72,12 @@ class EditScreenDialog(private val screen: Screen) : DialogWrapper(true) {
         panel.add(JLabel("Description:"))
         descriptionField.preferredSize = Dimension(380, 30)
         panel.add(descriptionField)
+        panel.add(Box.createVerticalStrut(10))
+
+        // Next Screen seçeneği (sadece Form ekranlar için)
+        panel.add(JLabel("Next Screen (Form Only):"))
+        nextScreenComboBox.preferredSize = Dimension(380, 30)
+        panel.add(nextScreenComboBox)
         panel.add(Box.createVerticalStrut(10))
 
         val checkBoxPanel = JPanel()
@@ -66,11 +107,20 @@ class EditScreenDialog(private val screen: Screen) : DialogWrapper(true) {
             return null
         }
 
+        // Next Screen seçimini al (sadece Form ekranlar için)
+        val nextScreenId = if (type == ScreenType.Form && nextScreenComboBox.selectedIndex > 0) {
+            val selectedIndex = nextScreenComboBox.selectedIndex - 1  // "-- None --" offset'i
+            existingScreens.filter { it.id != screen.id }.getOrNull(selectedIndex)?.id
+        } else {
+            null
+        }
+
         return screen.copy(
             name = name,
             type = type,
             description = description.ifEmpty { name },
-            isEntryScreen = isEntryScreen
+            isEntryScreen = isEntryScreen,
+            nextScreenId = nextScreenId
         )
     }
 }

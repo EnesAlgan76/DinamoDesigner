@@ -214,7 +214,11 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
 
             // Code Preview Panel
             codePreviewPanel = CodePreviewPanel(
-                onGenerateCode = { generateCode() }
+                onGenerateCode = {
+                    val flowCode = generateCode()
+                    val screenActionBlock = generateScreenActionBlock()
+                    Pair(flowCode, screenActionBlock)
+                }
             )
             add(codePreviewPanel, BorderLayout.SOUTH)
         }
@@ -240,7 +244,8 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
 
 
     private fun showAddScreenDialog() {
-        val dialog = AddScreenDialog()
+        // Mevcut ekranları dialog'a geç
+        val dialog = AddScreenDialog(screenManager.getAllScreens())
 
         if (dialog.showAndGet()) {
             val screen = dialog.getScreen()
@@ -268,7 +273,8 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
     }
 
     private fun showEditScreenDialog(screen: Screen) {
-        val dialog = EditScreenDialog(screen)
+        // Mevcut ekranları dialog'a geç
+        val dialog = EditScreenDialog(screen, screenManager.getAllScreens())
 
         if (dialog.showAndGet()) {
             val updatedScreen = dialog.getUpdatedScreen()
@@ -351,7 +357,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
         val flowName = getFlowNameFromActiveEditor()
 
         val code = CodeGenerator.generateFullFlowCode(project, flowName, screens)
-        codePreviewPanel.updateCode(code)
 
         val settings = PluginSettings.getInstance(project)
         if (settings.autoWriteToEditor) {
@@ -360,6 +365,19 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
 
         return code
     }
+
+    private fun generateScreenActionBlock(): String {
+        val screens = screenManager.getAllScreens()
+
+        if (screens.isEmpty()) {
+            return "// No screens available"
+        }
+
+        val flowName = getFlowNameFromActiveEditor()
+        val screenActionBlock = CodeGenerator.generateScreenActionImplBlock(project, flowName, screens)
+        return screenActionBlock
+    }
+
 
     private fun getFlowNameFromActiveEditor(): String {
         val editorManager = FileEditorManager.getInstance(project)

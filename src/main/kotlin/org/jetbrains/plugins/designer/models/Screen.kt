@@ -6,5 +6,6 @@ data class Screen(
     val type: ScreenType,
     val description: String,
     val components: MutableList<ComponentInstance> = mutableListOf(),
-    val isEntryScreen : Boolean
+    val isEntryScreen : Boolean,
+    val nextScreenId: String? = null
 )
