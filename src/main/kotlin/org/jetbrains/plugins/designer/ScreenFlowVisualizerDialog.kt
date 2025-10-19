@@ -50,6 +50,17 @@ class ScreenFlowVisualizerDialog(
 
         // Create connections based on navigation
         screens.forEach { screen ->
+            // 1. Next Screen bağlantıları (Form ekranlar için default continue button)
+            if (screen.type == ScreenType.Form && screen.nextScreenId != null) {
+                val sourceCard = cards.find { it.screen.id == screen.id }
+                val targetCard = cards.find { it.screen.id == screen.nextScreenId }
+
+                if (sourceCard != null && targetCard != null) {
+                    connections.add(Connection(sourceCard, targetCard, "Continue"))
+                }
+            }
+
+            // 2. Button component bağlantıları
             screen.components.forEach { component ->
                 val targetScreenId = component.properties["targetScreen"] as? String
                 if (!targetScreenId.isNullOrEmpty()) {
@@ -57,7 +68,9 @@ class ScreenFlowVisualizerDialog(
                     val targetCard = cards.find { it.screen.id == targetScreenId }
 
                     if (sourceCard != null && targetCard != null) {
-                        connections.add(Connection(sourceCard, targetCard, null))
+                        // Button label'ı varsa onu kullan
+                        val buttonLabel = component.properties["text"] as? String
+                        connections.add(Connection(sourceCard, targetCard, buttonLabel))
                     }
                 }
             }
@@ -170,21 +183,27 @@ class ScreenFlowVisualizerDialog(
             val ctrl2X = startX + dx * 0.75
             val ctrl2Y = endY - controlOffset
 
+            val isContinueConnection = connection.label == "Continue"
+            val lineColor = if (isContinueConnection) {
+                JBColor(Color(46, 204, 113, 180), Color(46, 204, 113, 180))  // Yeşil
+            } else {
+                JBColor(Color(52, 152, 219, 180), Color(52, 152, 219, 180))  // Mavi
+            }
+
             // Ana çizgi - Dashed pattern ile yön gösterme
-            g2d.color = JBColor(Color(52, 152, 219, 180), Color(52, 152, 219, 180))
+            g2d.color = lineColor
             g2d.stroke = BasicStroke(
                 3f,
                 BasicStroke.CAP_ROUND,
                 BasicStroke.JOIN_ROUND,
                 1.0f,
-                floatArrayOf(10f, 5f),  // Dash pattern - yön gösterir
+                floatArrayOf(10f, 5f),
                 0f
             )
 
             val curve = CubicCurve2D.Double(startX, startY, ctrl1X, ctrl1Y, ctrl2X, ctrl2Y, endX, endY)
             g2d.draw(curve)
 
-            // BÜYÜK OK BAŞI - Daha belirgin
             val angle = atan2(endY - ctrl2Y, endX - ctrl2X)
             val arrowSize = 16  // 12'den 16'ya çıkardık
 
@@ -199,66 +218,32 @@ class ScreenFlowVisualizerDialog(
                 (endY - arrowSize * sin(angle + Math.PI / 6)).toInt()
             )
 
-            g2d.stroke = BasicStroke(1f)  // Ok için solid stroke
+            g2d.stroke = BasicStroke(1f)
             g2d.fill(arrow)
-            g2d.color = JBColor(Color(41, 128, 185), Color(41, 128, 185))
-            g2d.draw(arrow)  // Ok kenarlarını da çiz
 
-            // ÇIZGI ÜZERİNDE EK KÜÇÜK OKLAR - Yön daha net
-            drawDirectionArrows(g2d, curve)
-
-            // Label'a yön oku ekle
-            connection.label?.let { label ->
-                val labelX = (startX + endX) / 2
-                val labelY = (startY + endY) / 2 - 10
-
-                g2d.color = JBColor(Color(255, 255, 255, 240), Color(50, 50, 50, 240))
-                val metrics = g2d.fontMetrics
-                val arrowSymbol = " →"  // Yön sembolü
-                val fullLabel = label + arrowSymbol
-                val labelWidth = metrics.stringWidth(fullLabel) + 12
-                val labelHeight = metrics.height + 6
-
-                g2d.fillRoundRect(
-                    (labelX - labelWidth / 2).toInt(),
-                    (labelY - labelHeight / 2).toInt(),
-                    labelWidth,
-                    labelHeight,
-                    8,
-                    8
-                )
-
-                // Border
-                g2d.color = JBColor(Color(52, 152, 219, 180), Color(52, 152, 219, 180))
-                g2d.stroke = BasicStroke(2f)
-                g2d.drawRoundRect(
-                    (labelX - labelWidth / 2).toInt(),
-                    (labelY - labelHeight / 2).toInt(),
-                    labelWidth - 1,
-                    labelHeight - 1,
-                    8,
-                    8
-                )
-
-                g2d.color = JBColor.foreground()
-                g2d.font = Font("SF Pro Display", Font.BOLD, 12)
-                g2d.drawString(
-                    fullLabel,
-                    (labelX - metrics.stringWidth(fullLabel) / 2).toInt(),
-                    (labelY + metrics.ascent / 2).toInt()
-                )
+            val arrowBorderColor = if (isContinueConnection) {
+                JBColor(Color(39, 174, 96), Color(39, 174, 96))  // Koyu yeşil
+            } else {
+                JBColor(Color(41, 128, 185), Color(41, 128, 185))  // Koyu mavi
             }
+            g2d.color = arrowBorderColor
+            g2d.draw(arrow)
+
+            drawDirectionArrows(g2d, curve, isContinueConnection)
         }
 
-        private fun drawDirectionArrows(g2d: Graphics2D, curve: CubicCurve2D.Double) {
-            // Çizgi üzerinde eşit aralıklarla küçük oklar çiz
+        private fun drawDirectionArrows(g2d: Graphics2D, curve: CubicCurve2D.Double, isContinue: Boolean = false) {
             val numArrows = 2
-            g2d.color = JBColor(Color(52, 152, 219, 200), Color(52, 152, 219, 200))
+            val arrowColor = if (isContinue) {
+                JBColor(Color(46, 204, 113, 200), Color(46, 204, 113, 200))  // Yeşil
+            } else {
+                JBColor(Color(52, 152, 219, 200), Color(52, 152, 219, 200))  // Mavi
+            }
+            g2d.color = arrowColor
 
             for (i in 1..numArrows) {
                 val t = i / (numArrows + 1.0)
 
-                // Bezier curve üzerinde nokta hesapla
                 val x = (1-t)*(1-t)*(1-t) * curve.x1 +
                         3*(1-t)*(1-t)*t * curve.ctrlx1 +
                         3*(1-t)*t*t * curve.ctrlx2 +
@@ -269,7 +254,6 @@ class ScreenFlowVisualizerDialog(
                         3*(1-t)*t*t * curve.ctrly2 +
                         t*t*t * curve.y2
 
-                // Teğet vektör (yön)
                 val dx = 3*(1-t)*(1-t) * (curve.ctrlx1 - curve.x1) +
                         6*(1-t)*t * (curve.ctrlx2 - curve.ctrlx1) +
                         3*t*t * (curve.x2 - curve.ctrlx2)
@@ -281,7 +265,6 @@ class ScreenFlowVisualizerDialog(
                 val angle = atan2(dy, dx)
                 val arrowSize = 12
 
-                // Küçük ok çiz
                 val miniArrow = Polygon()
                 miniArrow.addPoint(x.toInt(), y.toInt())
                 miniArrow.addPoint(
