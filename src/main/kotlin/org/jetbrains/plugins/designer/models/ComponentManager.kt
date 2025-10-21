@@ -1,7 +1,21 @@
 package org.jetbrains.plugins.designer.models
 
+import org.jetbrains.plugins.template.designer.components.ComponentDefinition
+
 class ComponentManager {
     private var componentCounter = 0
+
+    fun createComponent(componentDef: ComponentDefinition): ComponentInstance {
+        componentCounter++
+
+        val component = ComponentInstance(
+            id = "component_$componentCounter",
+            type = componentDef.type,
+            properties = mutableMapOf<String, Any>()
+        )
+
+        return component
+    }
 
     fun addComponentToScreen(screen: Screen, componentType: String, defaultProps: Map<String, Any>): ComponentInstance {
         componentCounter++

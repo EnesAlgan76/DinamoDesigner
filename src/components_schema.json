@@ -1,0 +1,181 @@
+{
+  "ai_usage": {
+    "description": "AI ile ekran oluşturmak için açık bir ekranda 'AI' butonuna tıklayın",
+    "setup": "Settings > Gemini API Key alanına API anahtarınızı girin",
+    "example_prompts": [
+      "Para transferi için bir form oluştur. Gönderen hesap, alıcı IBAN, tutar ve devam butonu olsun",
+      "Kullanıcı kayıt ekranı: Ad, soyad, email, doğum tarihi ve şartlar checkbox'ı ekle",
+      "Ödeme ekranı: Ödeme yöntemi seçici, tutar alanı ve onayla butonu"
+    ]
+  },
+  "components": [
+    {
+      "type": "TEXT_FIELD",
+      "description": "Text input field",
+      "example": {
+        "type": "TEXT_FIELD",
+        "properties": {
+          "identifier": "RECEIVER_NAME",
+          "title": "Alıcı Adı",
+          "maxLength": 50,
+          "required": true,
+          "textType": "OnlyAlpha"
+        }
+      },
+      "fields": {
+        "identifier": "Unique ID (UPPERCASE_SNAKE_CASE)",
+        "title": "Label text",
+        "maxLength": "Max characters",
+        "required": "Is mandatory",
+        "textType": "AlphaNumeric|OnlyNumber|OnlyAlpha|Email",
+        "keyboardType": "Default|NumberPad|EmailAddress|PhonePad"
+      }
+    },
+    {
+      "type": "AMOUNT_FIELD",
+      "description": "Currency amount input",
+      "example": {
+        "type": "AMOUNT_FIELD",
+        "properties": {
+          "identifier": "TRANSFER_AMOUNT",
+          "title": "Transfer Tutarı",
+          "currencyCode": "TRY",
+          "required": true,
+          "hideFraction": false
+        }
+      },
+      "fields": {
+        "identifier": "Unique ID",
+        "title": "Label text",
+        "currencyCode": "TRY|USD|EUR",
+        "required": "Is mandatory",
+        "hideFraction": "Hide decimal places"
+      }
+    },
+    {
+      "type": "COMBO_BOX",
+      "description": "Dropdown selector",
+      "example": {
+        "type": "COMBO_BOX",
+        "properties": {
+          "identifier": "FROM_ACCOUNT",
+          "title": "Gönderen Hesap",
+          "required": true
+        }
+      },
+      "fields": {
+        "identifier": "Unique ID",
+        "title": "Label text",
+        "items": "Comma-separated options (dynamic data will be fetched from backend)",
+        "required": "Is mandatory"
+      }
+    },
+    {
+      "type": "DATE_PICKER",
+      "description": "Date selection",
+      "example": {
+        "type": "DATE_PICKER",
+        "properties": {
+          "identifier": "BIRTH_DATE",
+          "title": "Doğum Tarihi",
+          "validation": true
+        }
+      },
+      "fields": {
+        "identifier": "Unique ID",
+        "title": "Label text",
+        "validation": "Enable validation"
+      }
+    },
+    {
+      "type": "CHECKBOX",
+      "description": "Checkbox with optional popup",
+      "example": {
+        "type": "CHECKBOX",
+        "properties": {
+          "identifier": "TERMS_AGREE",
+          "text": "Şartları kabul ediyorum",
+          "underlineText": "Kullanım Şartları",
+          "required": true,
+          "showPopUp": true,
+          "popUpTitle": "Kullanım Şartları"
+        }
+      },
+      "fields": {
+        "identifier": "Unique ID",
+        "text": "Checkbox label",
+        "underlineText": "Clickable underlined text",
+        "required": "Is mandatory",
+        "showPopUp": "Show popup on click"
+      }
+    },
+    {
+      "type": "BUTTON",
+      "description": "Action button",
+      "example": {
+        "type": "BUTTON",
+        "properties": {
+          "identifier": "CONTINUE_BTN",
+          "text": "Devam Et",
+          "buttonType": "PRIMARY",
+          "targetScreen": "TRANSFER_CONFIRM"
+        }
+      },
+      "fields": {
+        "identifier": "Unique ID",
+        "text": "Button text",
+        "buttonType": "PRIMARY|SECONDARY",
+        "targetScreen": "Target screen name to navigate"
+      }
+    },
+    {
+      "type": "PAYMENT_TOOL",
+      "description": "Payment method selector",
+      "example": {
+        "type": "PAYMENT_TOOL",
+        "properties": {
+          "identifier": "PAYMENT_METHOD",
+          "title": "Ödeme Yöntemi",
+          "paymentToolType": "Both",
+          "required": true
+        }
+      },
+      "fields": {
+        "identifier": "Unique ID",
+        "title": "Label text",
+        "paymentToolType": "Account|CreditCard|Both",
+        "required": "Is mandatory"
+      }
+    }
+  ],
+  "screenTypes": {
+    "Form": "Input screen with fields",
+    "Confirm": "Review before submission",
+    "Success": "Transaction complete",
+    "List": "Data list display"
+  },
+  "example_flow": {
+    "name": "Money Transfer",
+    "screens": [
+      {
+        "name": "TRANSFER_FORM",
+        "type": "Form",
+        "components": [
+          {"type": "COMBO_BOX", "identifier": "FROM_ACCOUNT", "title": "Gönderen Hesap"},
+          {"type": "TEXT_FIELD", "identifier": "TO_IBAN", "title": "Alıcı IBAN", "maxLength": 26},
+          {"type": "TEXT_FIELD", "identifier": "RECEIVER_NAME", "title": "Alıcı Adı"},
+          {"type": "AMOUNT_FIELD", "identifier": "AMOUNT", "title": "Tutar", "currencyCode": "TRY"},
+          {"type": "BUTTON", "identifier": "CONTINUE_BTN", "text": "Devam", "targetScreen": "TRANSFER_CONFIRM"}
+        ]
+      },
+      {
+        "name": "TRANSFER_CONFIRM",
+        "type": "Confirm"
+      },
+      {
+        "name": "TRANSFER_SUCCESS",
+        "type": "Success"
+      }
+    ]
+  }
+}

@@ -173,6 +173,7 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             val buttonPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 8, 0)).apply {
                 isOpaque = false
 
+                add(createToolbarButton("AI", ModernButtonStyle.PRIMARY) { showAIGeneration() })
                 add(createToolbarButton("Settings", ModernButtonStyle.SECONDARY) { showSettings() })
                 add(createToolbarButton("Export", ModernButtonStyle.SECONDARY) { exportDesign() })
                 add(createToolbarButton("Import", ModernButtonStyle.SECONDARY) { importDesign() })
@@ -516,6 +517,61 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
     private fun showSettings() {
         val settingsDialog = SettingsDialog(project)
         settingsDialog.show()
+    }
+
+    private fun showAIGeneration() {
+        val selectedScreen = screenManager.getSelectedScreen()
+
+        if (selectedScreen == null) {
+            JOptionPane.showMessageDialog(
+                contentPane,
+                "Lütfen önce bir ekran seçin",
+                "AI Generation",
+                JOptionPane.WARNING_MESSAGE
+            )
+            return
+        }
+
+        val aiDialog = AIGenerationDialog(project)
+
+        if (aiDialog.showAndGet()) {
+            val generatedJson = aiDialog.getGeneratedJson()
+
+            if (generatedJson != null) {
+                try {
+                    // Validate JSON first
+                    if (!org.jetbrains.plugins.designer.services.ComponentJsonParser.validateJson(generatedJson)) {
+                        throw IllegalArgumentException("Invalid JSON format")
+                    }
+
+                    // Parse and add components to current screen
+                    val addedCount = org.jetbrains.plugins.designer.services.ComponentJsonParser.parseAndAddComponents(
+                        generatedJson,
+                        selectedScreen,
+                        componentManager
+                    )
+
+                    // Refresh canvas
+                    canvasPanel.loadScreen(selectedScreen)
+                    propertiesPanel.showEmptyState()
+
+                    JOptionPane.showMessageDialog(
+                        contentPane,
+                        "$addedCount component başarıyla eklendi!",
+                        "AI Generation",
+                        JOptionPane.INFORMATION_MESSAGE
+                    )
+
+                } catch (e: Exception) {
+                    JOptionPane.showMessageDialog(
+                        contentPane,
+                        "Component oluşturma hatası: ${e.message}",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE
+                    )
+                }
+            }
+        }
     }
 
     // ========== DIALOG ACTIONS ==========
