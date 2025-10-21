@@ -1,9 +1,9 @@
 package org.jetbrains.plugins.designer.components
 
-sealed class PropertyDescriptor(val key: String) {
-    data class Text(val k: String, val default: String = "") : PropertyDescriptor(k)
-    data class Number(val k: String, val default: Int = 0) : PropertyDescriptor(k)
-    data class Boolean(val k: String, val default: kotlin.Boolean = false) : PropertyDescriptor(k)
-    data class Enum(val k: String, val default: String, val options: List<String>) : PropertyDescriptor(k)
-    data class ScreenReference(val k: String) : PropertyDescriptor(k)
+sealed class PropertyDescriptor(val key: String, val default: Any) {
+    data class Text(val k: String, val d: String = "") : PropertyDescriptor(k, d)
+    data class Number(val k: String, val d: Int = 0) : PropertyDescriptor(k, d)
+    data class Boolean(val k: String, val d: kotlin.Boolean = false) : PropertyDescriptor(k, d)
+    data class Enum(val k: String, val d: String, val options: List<String>) : PropertyDescriptor(k, d)
+    data class ScreenReference(val k: String, val d: String = "") : PropertyDescriptor(k, d)
 }

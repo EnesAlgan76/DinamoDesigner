@@ -1,6 +1,7 @@
 package org.jetbrains.plugins.designer.services
 
 import com.google.gson.JsonParser
+import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.Screen
 import org.jetbrains.plugins.template.designer.components.ComponentRegistry
 
@@ -30,6 +31,11 @@ object ComponentJsonParser {
                     ?: throw IllegalArgumentException("Unknown component type: $type")
 
                 val properties = mutableMapOf<String, Any>()
+
+                componentDef.propertyDescriptors.forEach { descriptor ->
+
+                    properties[descriptor.key] = descriptor.default
+                }
 
                 propertiesJson.keySet().forEach { key ->
                     val value = propertiesJson.get(key)
