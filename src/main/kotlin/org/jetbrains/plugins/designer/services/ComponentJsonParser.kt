@@ -30,7 +30,6 @@ object ComponentJsonParser {
                     ?: throw IllegalArgumentException("Unknown component type: $type")
 
                 val properties = mutableMapOf<String, Any>()
-                properties.putAll(componentDef.defaultProperties)
 
                 propertiesJson.keySet().forEach { key ->
                     val value = propertiesJson.get(key)
