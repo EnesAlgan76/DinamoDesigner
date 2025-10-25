@@ -14,6 +14,7 @@ import org.jetbrains.plugins.designer.models.*
 import org.jetbrains.plugins.designer.codegen.CodeGenerator
 import org.jetbrains.plugins.designer.settings.PluginSettings
 import org.jetbrains.plugins.designer.settings.SettingsDialog
+import org.jetbrains.plugins.designer.services.PreviewServerManager
 import org.jetbrains.plugins.designer.ui.panels.AddScreenDialog
 import org.jetbrains.plugins.designer.ui.panels.EditScreenDialog
 import org.jetbrains.plugins.template.designer.DesignPersistence
@@ -29,6 +30,7 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
     private val screenManager = ScreenManager()
     private val componentManager = ComponentManager()
     private val navigationManager = NavigationFlowManager(screenManager)
+    private val previewServerManager = PreviewServerManager.getInstance(project)
 
     private lateinit var screenListPanel: ScreenListPanel
     private lateinit var libraryPanel: ComponentLibraryPanel
@@ -44,6 +46,18 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
         contentPane.background = Color(0, 0, 255)
         contentPane = createMainLayout()
         initializeDefaultScreen()
+
+        startPreviewServer()
+    }
+
+    private fun startPreviewServer() {
+        val started = previewServerManager.startServer(8080)
+        if (started) {
+            println("✅ Preview server started successfully")
+            println(previewServerManager.getStatus())
+        } else {
+            println("❌ Failed to start preview server")
+        }
     }
 
 
@@ -311,6 +325,9 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
         propertiesPanel.showEmptyState()
         propertiesPanel.setAvailableScreens(screenManager.getAllScreens())
         selectedComponent = null
+
+        // Send preview when screen is selected
+        sendPreviewToClients(screen)
     }
 
     // ========== COMPONENT OPERATIONS ==========
@@ -343,9 +360,18 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                 navigationManager.removeConnection(component.id)
             }
         }
+
+        sendPreviewToClients(selectedScreen)
     }
 
-    // ========== ACTIONS ==========
+    private fun sendPreviewToClients(screen: Screen) {
+        try {
+            previewServerManager.sendPreview(screen)
+        } catch (e: Exception) {
+            println("⚠️ Failed to send preview: ${e.message}")
+        }
+    }
+
 
     private fun generateCode(): String {
         val screens = screenManager.getAllScreens()
@@ -354,7 +380,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             return "// No screens to generate. Please add screens first."
         }
 
-        // Get the flow name from the active editor file
         val flowName = getFlowNameFromActiveEditor()
 
         val code = CodeGenerator.generateFullFlowCode(project, flowName, screens)
@@ -421,7 +446,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                     }
                 }
 
-                // Show notification
                 JOptionPane.showMessageDialog(
                     contentPane,
                     "Generated code has been written to the active editor",

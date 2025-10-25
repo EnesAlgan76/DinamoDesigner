@@ -7,3 +7,12 @@
 build/
 !build/distributions/
 !build/distributions/*.zip
+
+# Google Cloud credentials
+credentials/
+*.json
+caches/
+wrapper/
+native/
+daemon/
+kotlin-profile/

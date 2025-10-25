@@ -6,16 +6,22 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
 import org.jetbrains.plugins.designer.services.GeminiService
+import org.jetbrains.plugins.designer.services.SpeechToTextService
+import org.jetbrains.plugins.designer.utils.AudioRecorder
 import java.awt.BorderLayout
 import java.awt.Dialog
 import java.awt.Dimension
 import java.awt.Font
+import java.awt.FlowLayout
 import javax.swing.*
 
 class AIGenerationDialog(private val project: Project) : DialogWrapper(project) {
 
     private val promptArea = JBTextArea(6, 50)
     private var generatedJson: String? = null
+    private val audioRecorder = AudioRecorder()
+    private var micButton: JButton? = null
+    private var isRecording = false
 
     init {
         title = "AI Screen Generation"
@@ -29,12 +35,23 @@ class AIGenerationDialog(private val project: Project) : DialogWrapper(project) 
     override fun createCenterPanel(): JComponent {
         val panel = JPanel(BorderLayout())
         panel.border = JBUI.Borders.empty(15)
-        panel.preferredSize = Dimension(600, 250)
+        panel.preferredSize = Dimension(600, 280)
 
-        // Title
+        // Title with microphone button
+        val titlePanel = JPanel(FlowLayout(FlowLayout.LEFT, 5, 0))
         val titleLabel = JBLabel("Ekran için ne istediğinizi açıklayın:")
         titleLabel.font = Font("SF Pro Display", Font.BOLD, 14)
-        panel.add(titleLabel, BorderLayout.NORTH)
+        titlePanel.add(titleLabel)
+
+        // Microphone button
+        micButton = JButton("🎤 Mikrofon")
+        micButton?.font = Font("SF Pro Display", Font.PLAIN, 12)
+        micButton?.addActionListener {
+            toggleRecording()
+        }
+        titlePanel.add(micButton!!)
+
+        panel.add(titlePanel, BorderLayout.NORTH)
 
         // Prompt area with scroll
         val scrollPane = JScrollPane(promptArea).apply {
@@ -43,7 +60,7 @@ class AIGenerationDialog(private val project: Project) : DialogWrapper(project) 
         panel.add(scrollPane, BorderLayout.CENTER)
 
         // Example hint
-        val hintLabel = JLabel("<html><i>AI, mevcut component'leri kullanarak ekranınızı otomatik oluşturacak.</i></html>")
+        val hintLabel = JLabel("<html><i>AI, mevcut component'leri kullanarak ekranınızı otomatik oluşturacak.<br>Mikrofon ile sesli komut verebilirsiniz.</i></html>")
         hintLabel.foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
         panel.add(hintLabel, BorderLayout.SOUTH)
 
@@ -121,4 +138,122 @@ class AIGenerationDialog(private val project: Project) : DialogWrapper(project) 
     }
 
     fun getGeneratedJson(): String? = generatedJson
+
+    /**
+     * Toggles microphone recording on/off
+     */
+    private fun toggleRecording() {
+        if (isRecording) {
+            stopRecording()
+        } else {
+            startRecording()
+        }
+    }
+
+    /**
+     * Starts audio recording
+     */
+    private fun startRecording() {
+        try {
+            audioRecorder.startRecording()
+            isRecording = true
+            micButton?.text = "⏹️ Durdur"
+            micButton?.background = java.awt.Color(255, 100, 100)
+        } catch (e: Exception) {
+            JOptionPane.showMessageDialog(
+                contentPane,
+                "Mikrofon başlatılamadı: ${e.message}",
+                "Hata",
+                JOptionPane.ERROR_MESSAGE
+            )
+        }
+    }
+
+    /**
+     * Stops recording and transcribes audio to text
+     */
+    private fun stopRecording() {
+        try {
+            val audioFile = audioRecorder.stopRecording()
+            isRecording = false
+            micButton?.text = "🎤 Mikrofon"
+            micButton?.background = null
+
+            if (audioFile == null) {
+                JOptionPane.showMessageDialog(
+                    contentPane,
+                    "Ses kaydı bulunamadı",
+                    "Hata",
+                    JOptionPane.WARNING_MESSAGE
+                )
+                return
+            }
+
+            // Show transcribing indicator
+            val progressDialog = JDialog(window, "İşleniyor...", Dialog.ModalityType.MODELESS)
+            val progressPanel = JPanel(BorderLayout())
+            progressPanel.border = JBUI.Borders.empty(20)
+            progressPanel.add(JLabel("Ses metne dönüştürülüyor..."), BorderLayout.CENTER)
+            val progressBar = JProgressBar()
+            progressBar.isIndeterminate = true
+            progressPanel.add(progressBar, BorderLayout.SOUTH)
+            progressDialog.contentPane = progressPanel
+            progressDialog.setSize(300, 100)
+            progressDialog.setLocationRelativeTo(window)
+
+            // Transcribe in background
+            object : SwingWorker<String?, Void>() {
+                override fun doInBackground(): String? {
+                    val speechService = SpeechToTextService(project)
+                    return speechService.transcribeAudio(audioFile)
+                }
+
+                override fun done() {
+                    progressDialog.dispose()
+                    try {
+                        val transcribedText = get()
+                        if (transcribedText != null && transcribedText.isNotBlank()) {
+                            // Clear example text and add transcribed text
+                            if (promptArea.text.startsWith("Örnek:")) {
+                                promptArea.text = transcribedText
+                            } else {
+                                // Append to existing text
+                                promptArea.text = promptArea.text + " " + transcribedText
+                            }
+                        } else {
+                            JOptionPane.showMessageDialog(
+                                contentPane,
+                                "Ses anlaşılamadı. Lütfen tekrar deneyin.",
+                                "Uyarı",
+                                JOptionPane.WARNING_MESSAGE
+                            )
+                        }
+                    } catch (e: Exception) {
+                        JOptionPane.showMessageDialog(
+                            contentPane,
+                            "Hata: ${e.message}",
+                            "Speech-to-Text Error",
+                            JOptionPane.ERROR_MESSAGE
+                        )
+                    } finally {
+                        // Clean up audio file
+                        audioFile.delete()
+                    }
+                }
+            }.execute()
+
+            progressDialog.isVisible = true
+
+        } catch (e: Exception) {
+            isRecording = false
+            micButton?.text = "🎤 Mikrofon"
+            micButton?.background = null
+            JOptionPane.showMessageDialog(
+                contentPane,
+                "Ses kaydı durdurulamadı: ${e.message}",
+                "Hata",
+                JOptionPane.ERROR_MESSAGE
+            )
+        }
+    }
 }
