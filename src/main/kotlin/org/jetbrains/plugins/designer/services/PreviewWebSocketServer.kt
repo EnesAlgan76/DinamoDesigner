@@ -6,6 +6,7 @@ import org.java_websocket.handshake.ClientHandshake
 import org.java_websocket.server.WebSocketServer
 import org.jetbrains.plugins.designer.models.Screen
 import java.net.InetSocketAddress
+import kotlin.collections.set
 
 class PreviewWebSocketServer(port: Int = 8080) : WebSocketServer(InetSocketAddress(port)) {
 
@@ -36,13 +37,9 @@ class PreviewWebSocketServer(port: Int = 8080) : WebSocketServer(InetSocketAddre
                 "identifier" to screen.name,
                 "title" to screen.name,
                 "inputs" to screen.components.map { component ->
-                    mapOf(
-                        "type" to component.type,
-                        "identifier" to component.properties["identifier"],
-                        "title" to component.properties["title"],
-                        "placeholder" to component.properties["placeholder"],
-                        "required" to component.properties["required"]
-                    )
+                    component.properties.toMutableMap().apply {
+                        put("inputType", component.type)
+                    }
                 }
             )
         )

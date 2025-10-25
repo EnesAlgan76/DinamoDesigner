@@ -7,9 +7,10 @@ import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
 import javax.swing.ImageIcon
+import kotlin.collections.set
 
 object TextFieldComponent : ComponentDefinition {
-    override val type = "TEXT_FIELD"
+    override val type = "TextFieldInput"
     override val displayName = "Text Field"
 
     override val propertyDescriptors = listOf(
