@@ -16,3 +16,6 @@ wrapper/
 native/
 daemon/
 kotlin-profile/
+POSTMAN_GUIDE.md
+WEBSOCKET_TEST.md
+SPEECH_API_SETUP.md
