@@ -3,6 +3,7 @@ package org.jetbrains.plugins.designer.services
 import com.google.gson.Gson
 import com.google.gson.JsonParser
 import com.intellij.openapi.project.Project
+import org.jetbrains.plugins.template.designer.components.TextFieldComponent
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -104,7 +105,7 @@ IMPORTANT: All properties are OPTIONAL except where noted. Only include properti
 AVAILABLE COMPONENTS:
 
 1. TEXT_FIELD - Text input field
-   Example: {"type": "TEXT_FIELD", "properties": {"identifier": "RECEIVER_NAME", "title": "Alıcı Adı", "required": true}}
+   Example: {"type": "${TextFieldComponent.type}", "properties": {"identifier": "RECEIVER_NAME", "title": "Alıcı Adı", "required": true}}
    All Properties:
    - identifier: string (UPPERCASE_SNAKE_CASE, default: "TEXTFIELD")
    - title: string (default: "Enter text")

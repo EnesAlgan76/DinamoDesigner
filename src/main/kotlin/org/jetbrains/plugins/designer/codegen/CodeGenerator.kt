@@ -28,8 +28,6 @@ object CodeGenerator {
                 else -> {}
             }
         }
-
-        code.append(generateUtilityMethods(project, screens))
         code.append(generateClassFooter())
 
         return code.toString()
@@ -538,97 +536,7 @@ public class $className extends TFBaseFlow {
         return code.toString()
     }
 
-    // ========== UTILITY METHODS ==========
 
-    private fun generateUtilityMethods(project: Project, screens: List<Screen>): String {
-        val code = StringBuilder()
-
-        // Generate validation methods for each form screen
-        screens.filter { it.type == ScreenType.Form }.forEach { screen ->
-            code.append(generateValidationMethod(screen))
-        }
-
-        // Generate submit methods for each flow
-        val flows = groupScreensByFlow(screens)
-        flows.forEach { (baseName, flowScreens) ->
-            if (flowScreens.any { it.type == ScreenType.Form }) {
-                code.append(generateSubmitMethod(baseName, flowScreens))
-            }
-        }
-
-        code.append(generateReloadDataModelsMethod())
-
-        return code.toString()
-    }
-
-    private fun generateValidationMethod(screen: Screen): String {
-        val code = StringBuilder()
-
-        code.append("""
-    private void validate${screen.name}(final ScreenActionRequest request) throws MiddlewareException {
-""".trimIndent())
-
-        screen.components.forEach { component ->
-            val identifier = component.properties["identifier"] as? String ?: return@forEach
-
-            when (component.type) {
-                "TEXT_FIELD", "AMOUNT_FIELD" -> {
-                    code.append("\n        String $identifier = TFFlowUtil.parseValue(request.getParameters(), \"$identifier\");")
-
-                    val required = component.properties["required"] as? Boolean ?: false
-                    if (required) {
-                        code.append("""
-        if (Util.isNullOrEmpty($identifier)) {
-            throw new MiddlewareException(messages.getMessage("${identifier}_required_message"), AdcLogType.Warning, 1);
-        }""")
-                    }
-                }
-                "COMBO_BOX" -> {
-                    code.append("\n        Integer ${identifier}_index = TFFlowUtil.parseIndex(request.getParameters(), \"$identifier\");")
-                }
-                "DATE_PICKER" -> {
-                    code.append("\n        String ${identifier}_date = TFFlowUtil.parseValue(request.getParameters(), \"$identifier\");")
-                }
-            }
-        }
-
-        code.append("""
-
-    }
-
-""".trimIndent())
-
-        return code.toString()
-    }
-
-    private fun generateSubmitMethod(baseName: String, flowScreens: List<Screen>): String {
-        return """
-    private void submit$baseName(
-            final IPozitronIntegrationService service,
-            final Messages messages,
-            final ScreenActionRequest request) throws MiddlewareException {
-        
-        // TODO: Implement transaction submission logic
-        // Extract data from request parameters
-        // Call service methods
-        // Handle response
-    }
-
-""".trimIndent()
-    }
-
-    private fun generateReloadDataModelsMethod(): String {
-        return """
-    private List<String> getReloadDataModels() {
-        List<String> dataModels = new ArrayList<String>();
-        // TODO: Add data models that need to be reloaded
-        return dataModels;
-    }
-
-""".trimIndent()
-    }
-
-    // ========== HELPER METHODS ==========
 
     private fun groupScreensByFlow(screens: List<Screen>): Map<String, List<Screen>> {
         val flows = mutableMapOf<String, MutableList<Screen>>()

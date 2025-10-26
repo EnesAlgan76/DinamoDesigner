@@ -5,6 +5,7 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.wm.impl.welcomeScreen.learnIde.coursesInProgress.mainBackgroundColor
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
@@ -171,37 +172,101 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                 val g2d = g as Graphics2D
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
-                g2d.color = JBColor(Color(255, 255, 255, 200), Color(40, 40, 40, 200))
-                g2d.fillRoundRect(0, 0, width, height, 15, 15)
+                // Modern flat background
+                g2d.color = JBColor(Color(255, 255, 255, 240), Color(30, 30, 32, 240))
+                g2d.fillRoundRect(0, 0, width, height, 20, 20)
 
-                g2d.color = JBColor(Color(255, 255, 255, 100), Color(255, 255, 255, 30))
-                g2d.drawRoundRect(0, 0, width - 1, height - 1, 15, 15)
+                // Subtle shadow effect
+                g2d.color = JBColor(Color(0, 0, 0, 10), Color(0, 0, 0, 30))
+                g2d.drawRoundRect(0, 0, width - 1, height - 1, 20, 20)
             }
         }.apply {
             isOpaque = false
-            border = JBUI.Borders.empty(15, 20)
+            border = JBUI.Borders.empty(12, 24)
 
-            val titleLabel = StyledLabel("Design Canvas", 14, Font.BOLD)
-            add(titleLabel, BorderLayout.WEST)
-
-            val buttonPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 8, 0)).apply {
+            val iconBar = JPanel().apply {
                 isOpaque = false
+                layout = FlowLayout(FlowLayout.CENTER, 8, 0)
 
-                add(createToolbarButton("AI", ModernButtonStyle.PRIMARY) { showAIGeneration() })
-                add(createToolbarButton("Settings", ModernButtonStyle.SECONDARY) { showSettings() })
-                add(createToolbarButton("Export", ModernButtonStyle.SECONDARY) { exportDesign() })
-                add(createToolbarButton("Import", ModernButtonStyle.SECONDARY) { importDesign() })
-                add(createToolbarButton("Flow", ModernButtonStyle.INFO) { showScreenFlow() })
-                add(createToolbarButton("Clear", ModernButtonStyle.DANGER) { clearCanvas() })
+                add(createModernIconButton("/icons/ai.svg", "AI", Color(147, 51, 234)) { showAIGeneration() })
+                add(createModernIconButton("/icons/flow.svg", "Flow", Color(59, 130, 246)) { showScreenFlow() })
+                add(createModernIconButton("/icons/setting.svg", "Settings", Color(100, 116, 139)) { showSettings() })
+                add(createModernIconButton("/icons/export.svg", "Export", Color(100, 116, 139)) { exportDesign() })
+                add(createModernIconButton("/icons/import.svg", "Import", Color(100, 116, 139)) { importDesign() })
+                add(createModernIconButton("/icons/clear.svg", "Clear", Color(239, 68, 68)) { clearCanvas() })
             }
-            add(buttonPanel, BorderLayout.EAST)
+            add(iconBar, BorderLayout.CENTER)
         }
     }
 
-    private fun createToolbarButton(text: String, style: ModernButtonStyle, action: () -> Unit): JButton {
-        return ModernButton(text, style, action).apply {
-            preferredSize = Dimension(70, 32)
-            font = Font("SF Pro Display", Font.BOLD, 11)
+    private fun createModernIconButton(iconPath: String, label: String, accentColor: Color, action: () -> Unit): JPanel {
+        return JPanel().apply {
+            layout = BorderLayout()
+            isOpaque = false
+            preferredSize = Dimension(64, 60)
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+
+            var isHovered = false
+
+            val iconButton = object : JLabel() {
+                init {
+                    horizontalAlignment = SwingConstants.CENTER
+                    preferredSize = Dimension(64, 40)
+
+                    try {
+                        val loadedIcon = IconLoader.getIcon(iconPath, DinamoDesignerDialog::class.java)
+                        if (loadedIcon != null) {
+                            val scaledIcon = com.intellij.util.IconUtil.scale(loadedIcon, null, 20f / loadedIcon.iconWidth)
+                            icon = scaledIcon
+                        }
+                    } catch (e: Exception) {
+                        println("⚠️ Icon not found: $iconPath")
+                    }
+                }
+
+                override fun paintComponent(g: Graphics) {
+                    val g2d = g as Graphics2D
+                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+
+                    if (isHovered) {
+                        g2d.color = Color(accentColor.red, accentColor.green, accentColor.blue, 20)
+                        g2d.fillRoundRect(12, 4, width - 24, height - 8, 20, 20)
+                    }
+
+                    super.paintComponent(g)
+                }
+            }
+
+            val textLabel = JLabel(label).apply {
+                horizontalAlignment = SwingConstants.CENTER
+                font = Font("SF Pro Display", Font.PLAIN, 10)
+                foreground = JBColor(Color(100, 116, 139), Color(148, 163, 184))
+            }
+
+            add(iconButton, BorderLayout.CENTER)
+            add(textLabel, BorderLayout.SOUTH)
+
+            val mouseAdapter = object : java.awt.event.MouseAdapter() {
+                override fun mouseEntered(e: java.awt.event.MouseEvent) {
+                    isHovered = true
+                    textLabel.foreground = accentColor
+                    iconButton.repaint()
+                }
+
+                override fun mouseExited(e: java.awt.event.MouseEvent) {
+                    isHovered = false
+                    textLabel.foreground = JBColor(Color(100, 116, 139), Color(148, 163, 184))
+                    iconButton.repaint()
+                }
+
+                override fun mouseClicked(e: java.awt.event.MouseEvent) {
+                    action()
+                }
+            }
+
+            iconButton.addMouseListener(mouseAdapter)
+            textLabel.addMouseListener(mouseAdapter)
+            addMouseListener(mouseAdapter)
         }
     }
 
