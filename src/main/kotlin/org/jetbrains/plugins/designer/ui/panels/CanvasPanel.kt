@@ -15,7 +15,9 @@ import javax.swing.*
 
 class CanvasPanel(
     private val componentManager: ComponentManager,
-    private val onComponentSelected: (ComponentInstance) -> Unit
+    private val onComponentSelected: (ComponentInstance) -> Unit,
+    private val onComponentAdded: ((Screen) -> Unit)? = null,
+    private val onComponentDeleted: ((Screen) -> Unit)? = null
 ) : JPanel() {
 
     private var currentScreen: Screen? = null
@@ -60,6 +62,8 @@ class CanvasPanel(
             val scrollPane = parent.parent as? JScrollPane
             scrollPane?.verticalScrollBar?.value = scrollPane?.verticalScrollBar?.maximum ?: 0
         }
+
+        onComponentAdded?.invoke(screen)
     }
 
     private fun createComponentPreview(component: ComponentInstance): JPanel {
@@ -103,6 +107,7 @@ class CanvasPanel(
                     currentScreen?.let { screen ->
                         componentManager.removeComponent(screen, component.id)
                         refreshComponents()
+                        onComponentDeleted?.invoke(screen)
                     }
                 }
             }

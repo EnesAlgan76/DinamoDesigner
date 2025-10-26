@@ -154,7 +154,9 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             // Canvas Panel
             canvasPanel = CanvasPanel(
                 componentManager = componentManager,
-                onComponentSelected = { component -> onComponentSelected(component) }
+                onComponentSelected = { component -> onComponentSelected(component) },
+                onComponentAdded = { screen ->sendPreviewToClients(screen)},
+                onComponentDeleted = {screen -> sendPreviewToClients(screen)}
             )
 
             val scrollPane = JScrollPane(canvasPanel).apply {
@@ -633,7 +635,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                         throw IllegalArgumentException("Invalid JSON format")
                     }
 
-                    // Parse and add components to current screen
                     val addedCount = org.jetbrains.plugins.designer.services.ComponentJsonParser.parseAndAddComponents(
                         generatedJson,
                         selectedScreen,
@@ -643,6 +644,8 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                     // Refresh canvas
                     canvasPanel.loadScreen(selectedScreen)
                     propertiesPanel.showEmptyState()
+
+                    sendPreviewToClients(selectedScreen)
 
                     JOptionPane.showMessageDialog(
                         contentPane,
