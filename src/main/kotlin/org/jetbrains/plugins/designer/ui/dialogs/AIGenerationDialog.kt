@@ -2,67 +2,118 @@ package org.jetbrains.plugins.template.designer.ui
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
-import com.intellij.ui.components.JBLabel
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
 import org.jetbrains.plugins.designer.services.GeminiService
-import org.jetbrains.plugins.designer.services.SpeechToTextService
-import org.jetbrains.plugins.designer.utils.AudioRecorder
-import java.awt.BorderLayout
-import java.awt.Dialog
-import java.awt.Dimension
-import java.awt.Font
-import java.awt.FlowLayout
+import java.awt.*
 import javax.swing.*
 
 class AIGenerationDialog(private val project: Project) : DialogWrapper(project) {
 
     private val promptArea = JBTextArea(6, 50)
     private var generatedJson: String? = null
-    private val audioRecorder = AudioRecorder()
-    private var micButton: JButton? = null
-    private var isRecording = false
 
     init {
         title = "AI Screen Generation"
         promptArea.lineWrap = true
         promptArea.wrapStyleWord = true
-        promptArea.font = Font("SF Pro Display", Font.PLAIN, 13)
-        promptArea.text = "Örnek: Para transferi için bir form ekranı oluştur. Gönderen hesap, alıcı IBAN, tutar ve devam butonu olsun."
+        promptArea.font = Font("SF Pro Display", Font.PLAIN, 14)
+        promptArea.margin = Insets(10, 10, 10, 10)
+        promptArea.background = JBColor(Color(249, 250, 251), Color(38, 38, 38))
+        promptArea.foreground = JBColor(Color(17, 24, 39), Color(229, 231, 235))
+        promptArea.caretColor = JBColor(Color(99, 102, 241), Color(139, 92, 246))
+        promptArea.text = "e.g., Create a login screen with email, password fields and a submit button"
+
+        promptArea.addFocusListener(object : java.awt.event.FocusAdapter() {
+            override fun focusGained(e: java.awt.event.FocusEvent) {
+                if (promptArea.text == "e.g., Create a login screen with email, password fields and a submit button") {
+                    promptArea.text = ""
+                    promptArea.foreground = JBColor(Color(17, 24, 39), Color(229, 231, 235))
+                }
+            }
+
+            override fun focusLost(e: java.awt.event.FocusEvent) {
+                if (promptArea.text.trim().isEmpty()) {
+                    promptArea.text = "e.g., Create a login screen with email, password fields and a submit button"
+                    promptArea.foreground = JBColor(Color(156, 163, 175), Color(107, 114, 128))
+                }
+            }
+        })
+
         init()
+
+        SwingUtilities.invokeLater {
+            promptArea.requestFocusInWindow()
+            promptArea.selectAll()
+        }
     }
 
     override fun createCenterPanel(): JComponent {
         val panel = JPanel(BorderLayout())
-        panel.border = JBUI.Borders.empty(15)
-        panel.preferredSize = Dimension(600, 280)
+        panel.border = JBUI.Borders.empty(20)
+        panel.preferredSize = Dimension(650, 280)
 
-        // Title with microphone button
-        val titlePanel = JPanel(FlowLayout(FlowLayout.LEFT, 5, 0))
-        val titleLabel = JBLabel("Ekran için ne istediğinizi açıklayın:")
-        titleLabel.font = Font("SF Pro Display", Font.BOLD, 14)
-        titlePanel.add(titleLabel)
-
-        // Microphone button
-        micButton = JButton("🎤 Mikrofon")
-        micButton?.font = Font("SF Pro Display", Font.PLAIN, 12)
-        micButton?.addActionListener {
-            toggleRecording()
+        val titleLabel = JLabel("✨ Describe the screen you want to create").apply {
+            font = Font("SF Pro Display", Font.BOLD, 15)
+            foreground = JBColor(Color(71, 85, 105), Color(148, 163, 184))
+            border = JBUI.Borders.emptyBottom(12)
         }
-        titlePanel.add(micButton!!)
 
-        panel.add(titlePanel, BorderLayout.NORTH)
+        val inputContainer = object : JPanel(BorderLayout()) {
+            override fun paintComponent(g: Graphics) {
+                val g2d = g as Graphics2D
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
-        // Prompt area with scroll
+                g2d.color = promptArea.background
+                g2d.fillRoundRect(0, 0, width, height, 12, 12)
+
+                g2d.color = JBColor(Color(203, 213, 225), Color(75, 85, 99))
+                g2d.drawRoundRect(0, 0, width - 1, height - 1, 12, 12)
+
+                if (promptArea.hasFocus()) {
+                    g2d.color = JBColor(Color(99, 102, 241, 180), Color(139, 92, 246, 180))
+                    g2d.setStroke(BasicStroke(2f))
+                    g2d.drawRoundRect(0, 0, width - 1, height - 1, 12, 12)
+                }
+
+                super.paintComponent(g)
+            }
+        }.apply {
+            isOpaque = false
+            border = JBUI.Borders.empty(2)
+        }
+
+        promptArea.addFocusListener(object : java.awt.event.FocusAdapter() {
+            override fun focusGained(e: java.awt.event.FocusEvent) {
+                if (promptArea.text == "e.g., Create a login screen with email, password fields and a submit button") {
+                    promptArea.text = ""
+                    promptArea.foreground = JBColor(Color(17, 24, 39), Color(229, 231, 235))
+                }
+                inputContainer.repaint()
+            }
+
+            override fun focusLost(e: java.awt.event.FocusEvent) {
+                if (promptArea.text.trim().isEmpty()) {
+                    promptArea.text = "e.g., Create a login screen with email, password fields and a submit button"
+                    promptArea.foreground = JBColor(Color(156, 163, 175), Color(107, 114, 128))
+                }
+                inputContainer.repaint()
+            }
+        })
+
+        promptArea.foreground = JBColor(Color(156, 163, 175), Color(107, 114, 128))
+
         val scrollPane = JScrollPane(promptArea).apply {
-            border = JBUI.Borders.empty(10, 0, 10, 0)
+            border = null
+            isOpaque = false
+            viewport.isOpaque = false
         }
-        panel.add(scrollPane, BorderLayout.CENTER)
 
-        // Example hint
-        val hintLabel = JLabel("<html><i>AI, mevcut component'leri kullanarak ekranınızı otomatik oluşturacak.<br>Mikrofon ile sesli komut verebilirsiniz.</i></html>")
-        hintLabel.foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
-        panel.add(hintLabel, BorderLayout.SOUTH)
+        inputContainer.add(scrollPane, BorderLayout.CENTER)
+
+        panel.add(titleLabel, BorderLayout.NORTH)
+        panel.add(inputContainer, BorderLayout.CENTER)
 
         return panel
     }
@@ -70,18 +121,21 @@ class AIGenerationDialog(private val project: Project) : DialogWrapper(project) 
     override fun doOKAction() {
         val userPrompt = promptArea.text.trim()
 
-        if (userPrompt.isBlank()) {
+        if (userPrompt.isBlank() || userPrompt == "e.g., Create a login screen with email, password fields and a submit button") {
             JOptionPane.showMessageDialog(
                 contentPane,
-                "Lütfen bir açıklama girin",
-                "Hata",
+                "Please enter a screen description",
+                "Empty Prompt",
                 JOptionPane.WARNING_MESSAGE
             )
             return
         }
 
+        generateScreen(userPrompt)
+    }
+
+    private fun generateScreen(prompt: String) {
         try {
-            // Show loading indicator
             val progressDialog = JDialog(window, "Generating...", Dialog.ModalityType.MODELESS)
             val progressPanel = JPanel(BorderLayout())
             progressPanel.border = JBUI.Borders.empty(20)
@@ -93,11 +147,10 @@ class AIGenerationDialog(private val project: Project) : DialogWrapper(project) 
             progressDialog.setSize(300, 100)
             progressDialog.setLocationRelativeTo(window)
 
-            // Generate in background thread
             object : SwingWorker<String?, Void>() {
                 override fun doInBackground(): String? {
                     val geminiService = GeminiService(project)
-                    return geminiService.generateScreenComponents(userPrompt)
+                    return geminiService.generateScreenComponents(prompt)
                 }
 
                 override fun done() {
@@ -138,122 +191,4 @@ class AIGenerationDialog(private val project: Project) : DialogWrapper(project) 
     }
 
     fun getGeneratedJson(): String? = generatedJson
-
-    /**
-     * Toggles microphone recording on/off
-     */
-    private fun toggleRecording() {
-        if (isRecording) {
-            stopRecording()
-        } else {
-            startRecording()
-        }
-    }
-
-    /**
-     * Starts audio recording
-     */
-    private fun startRecording() {
-        try {
-            audioRecorder.startRecording()
-            isRecording = true
-            micButton?.text = "⏹️ Durdur"
-            micButton?.background = java.awt.Color(255, 100, 100)
-        } catch (e: Exception) {
-            JOptionPane.showMessageDialog(
-                contentPane,
-                "Mikrofon başlatılamadı: ${e.message}",
-                "Hata",
-                JOptionPane.ERROR_MESSAGE
-            )
-        }
-    }
-
-    /**
-     * Stops recording and transcribes audio to text
-     */
-    private fun stopRecording() {
-        try {
-            val audioFile = audioRecorder.stopRecording()
-            isRecording = false
-            micButton?.text = "🎤 Mikrofon"
-            micButton?.background = null
-
-            if (audioFile == null) {
-                JOptionPane.showMessageDialog(
-                    contentPane,
-                    "Ses kaydı bulunamadı",
-                    "Hata",
-                    JOptionPane.WARNING_MESSAGE
-                )
-                return
-            }
-
-            // Show transcribing indicator
-            val progressDialog = JDialog(window, "İşleniyor...", Dialog.ModalityType.MODELESS)
-            val progressPanel = JPanel(BorderLayout())
-            progressPanel.border = JBUI.Borders.empty(20)
-            progressPanel.add(JLabel("Ses metne dönüştürülüyor..."), BorderLayout.CENTER)
-            val progressBar = JProgressBar()
-            progressBar.isIndeterminate = true
-            progressPanel.add(progressBar, BorderLayout.SOUTH)
-            progressDialog.contentPane = progressPanel
-            progressDialog.setSize(300, 100)
-            progressDialog.setLocationRelativeTo(window)
-
-            // Transcribe in background
-            object : SwingWorker<String?, Void>() {
-                override fun doInBackground(): String? {
-                    val speechService = SpeechToTextService(project)
-                    return speechService.transcribeAudio(audioFile)
-                }
-
-                override fun done() {
-                    progressDialog.dispose()
-                    try {
-                        val transcribedText = get()
-                        if (transcribedText != null && transcribedText.isNotBlank()) {
-                            // Clear example text and add transcribed text
-                            if (promptArea.text.startsWith("Örnek:")) {
-                                promptArea.text = transcribedText
-                            } else {
-                                // Append to existing text
-                                promptArea.text = promptArea.text + " " + transcribedText
-                            }
-                        } else {
-                            JOptionPane.showMessageDialog(
-                                contentPane,
-                                "Ses anlaşılamadı. Lütfen tekrar deneyin.",
-                                "Uyarı",
-                                JOptionPane.WARNING_MESSAGE
-                            )
-                        }
-                    } catch (e: Exception) {
-                        JOptionPane.showMessageDialog(
-                            contentPane,
-                            "Hata: ${e.message}",
-                            "Speech-to-Text Error",
-                            JOptionPane.ERROR_MESSAGE
-                        )
-                    } finally {
-                        // Clean up audio file
-                        audioFile.delete()
-                    }
-                }
-            }.execute()
-
-            progressDialog.isVisible = true
-
-        } catch (e: Exception) {
-            isRecording = false
-            micButton?.text = "🎤 Mikrofon"
-            micButton?.background = null
-            JOptionPane.showMessageDialog(
-                contentPane,
-                "Ses kaydı durdurulamadı: ${e.message}",
-                "Hata",
-                JOptionPane.ERROR_MESSAGE
-            )
-        }
-    }
 }

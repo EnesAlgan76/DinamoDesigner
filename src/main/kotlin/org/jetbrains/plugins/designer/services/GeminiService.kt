@@ -104,7 +104,7 @@ IMPORTANT: All properties are OPTIONAL except where noted. Only include properti
 
 AVAILABLE COMPONENTS:
 
-1. TEXT_FIELD - Text input field
+1. ${TextFieldComponent.type} - Text input field
    Example: {"type": "${TextFieldComponent.type}", "properties": {"identifier": "RECEIVER_NAME", "title": "Alıcı Adı", "required": true}}
    All Properties:
    - identifier: string (UPPERCASE_SNAKE_CASE, default: "TEXTFIELD")
