@@ -10,7 +10,7 @@ import java.awt.Image
 import javax.swing.ImageIcon
 
 object AmountFieldComponent : ComponentDefinition {
-    override val type = "AMOUNT_FIELD"
+    override val type = "AmountTextFieldInput"
     override val displayName = "Amount Field"
 
     override val propertyDescriptors = listOf(

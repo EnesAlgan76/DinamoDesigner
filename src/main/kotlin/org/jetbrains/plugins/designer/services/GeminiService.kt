@@ -3,6 +3,7 @@ package org.jetbrains.plugins.designer.services
 import com.google.gson.Gson
 import com.google.gson.JsonParser
 import com.intellij.openapi.project.Project
+import org.jetbrains.plugins.designer.components.AmountFieldComponent
 import org.jetbrains.plugins.template.designer.components.TextFieldComponent
 import java.net.URI
 import java.net.http.HttpClient
@@ -119,8 +120,8 @@ AVAILABLE COMPONENTS:
    - informationTitle: string (default: "")
    - disable: boolean (default: false)
 
-2. AMOUNT_FIELD - Currency amount input
-   Example: {"type": "AMOUNT_FIELD", "properties": {"identifier": "TRANSFER_AMOUNT", "title": "Tutar"}}
+2. ${AmountFieldComponent.type} - Currency amount input
+   Example: {"type": "${AmountFieldComponent.type}", "properties": {"identifier": "TRANSFER_AMOUNT", "title": "Tutar"}}
    All Properties:
    - identifier: string (default: "AMOUNT")
    - title: string (default: "Amount")
