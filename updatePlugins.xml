@@ -1,7 +1,7 @@
 <plugins>
     <plugin id="com.enesalgan.dinamodesigner"
             url="https://github.com/EnesAlgan76/DinamoDesigner/raw/main/build/distributions/IntelliJ%20Platform%20Plugin%20Template-1.0.5.zip"
-            version="1.0.5">
+            version="1.0.6">
         <name>Dinamo Designer</name>
         <description>
             IntelliJ için Dinamo Designer eklentisi.
@@ -9,7 +9,7 @@
         <vendor email="ensalgn76@gmail.com" url="https://github.com/EnesAlgan76">Enes Algan</vendor>
         <idea-version since-build="241" until-build="999.*"/>
         <change-notes>
-            Version güncellendi 1.0.5
+            Version güncellendi 1.0.6
         </change-notes>
     </plugin>
 </plugins>
