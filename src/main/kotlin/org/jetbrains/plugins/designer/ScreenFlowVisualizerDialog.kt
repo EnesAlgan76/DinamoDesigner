@@ -150,9 +150,6 @@ class ScreenFlowVisualizerDialog(
                 val isDragged = card == draggedCard
                 drawCard(g2d, card, isHovered, isDragged)
             }
-
-            // Draw info panel
-            drawInfoPanel(g2d)
         }
 
         private fun drawConnection(g2d: Graphics2D, connection: Connection) {
@@ -312,30 +309,6 @@ class ScreenFlowVisualizerDialog(
             val componentCount = "${card.screen.components.size} components"
             val countWidth = metrics.stringWidth(componentCount)
             g2d.drawString(componentCount, x + (w - countWidth) / 2, y + h - 15)
-        }
-
-        private fun drawInfoPanel(g2d: Graphics2D) {
-            g2d.color = JBColor(Color(255, 255, 255, 220), Color(40, 40, 40, 220))
-            g2d.fillRoundRect(20, 20, 200, 100, 12, 12)
-
-            g2d.color = JBColor.foreground()
-            g2d.font = Font("SF Pro Display", Font.BOLD, 14)
-            g2d.drawString("📊 Statistics", 35, 45)
-
-            g2d.font = Font("SF Pro Display", Font.PLAIN, 12)
-            g2d.drawString("Screens: ${cards.size}", 35, 70)
-            g2d.drawString("Connections: ${connections.size}", 35, 90)
-
-            g2d.color = JBColor(Color(255, 255, 255, 220), Color(40, 40, 40, 220))
-            g2d.fillRoundRect(width - 220, 20, 200, 80, 12, 12)
-
-            g2d.color = JBColor.foreground()
-            g2d.font = Font("SF Pro Display", Font.BOLD, 14)
-            g2d.drawString("🎮 Controls", width - 205, 45)
-
-            g2d.font = Font("SF Pro Display", Font.PLAIN, 11)
-            g2d.drawString("• Drag cards to move", width - 205, 65)
-            g2d.drawString("• Hover for details", width - 205, 82)
         }
     }
 
