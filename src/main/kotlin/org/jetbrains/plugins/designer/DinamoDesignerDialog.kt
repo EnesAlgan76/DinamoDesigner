@@ -111,6 +111,8 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                 isOpaque = false
                 viewport.isOpaque = false
                 border = JBUI.Borders.empty(10, 0, 0, 0)
+                verticalScrollBar.unitIncrement = 16
+                verticalScrollBar.blockIncrement = 64
             }
             add(scrollPane, BorderLayout.CENTER)
         }
@@ -283,6 +285,8 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                 isOpaque = false
                 viewport.isOpaque = false
                 border = JBUI.Borders.empty(20, 0, 0, 0)
+                verticalScrollBar.unitIncrement = 16
+                verticalScrollBar.blockIncrement = 64
             }
             add(scrollPane, BorderLayout.CENTER)
 
