@@ -9,7 +9,7 @@ import org.jetbrains.plugins.designer.models.Screen
 import javax.swing.ImageIcon
 
 object CheckBoxComponent : ComponentDefinition {
-    override val type = "CHECKBOX"
+    override val type = "CheckBox"
     override val displayName = "CheckBox"
 
     override val propertyDescriptors = listOf(

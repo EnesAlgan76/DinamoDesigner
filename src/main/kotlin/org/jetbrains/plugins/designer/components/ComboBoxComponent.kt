@@ -9,7 +9,7 @@ import org.jetbrains.plugins.designer.models.Screen
 import javax.swing.ImageIcon
 
 object ComboBoxComponent : ComponentDefinition {
-    override val type = "COMBO_BOX"
+    override val type = "ComboBoxInput"
     override val displayName = "ComboBox"
 
     override val propertyDescriptors = listOf(
@@ -20,6 +20,7 @@ object ComboBoxComponent : ComponentDefinition {
         PropertyDescriptor.Text("placeholder", "Please select"),
         PropertyDescriptor.Boolean("showPlaceholderAsFirstItem", false),
         PropertyDescriptor.Boolean("required", false),
+        PropertyDescriptor.Boolean("disable", false),
         PropertyDescriptor.Text("informationString", ""),
         PropertyDescriptor.Text("informationTitle", "")
     )

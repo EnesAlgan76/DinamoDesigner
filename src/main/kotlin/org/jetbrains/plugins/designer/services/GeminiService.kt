@@ -4,11 +4,17 @@ import com.google.gson.Gson
 import com.google.gson.JsonParser
 import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.designer.components.AmountFieldComponent
+import org.jetbrains.plugins.template.designer.components.CheckBoxComponent
+import org.jetbrains.plugins.template.designer.components.ComboBoxComponent
 import org.jetbrains.plugins.template.designer.components.TextFieldComponent
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.util.Base64
+import javax.imageio.ImageIO
 
 class GeminiService(private val project: Project) {
 
@@ -23,23 +29,52 @@ class GeminiService(private val project: Project) {
     /**
      * Generates screen components based on user description
      * @param userPrompt User's description of what they want
+     * @param image Optional screenshot image for visual analysis
      * @return JSON string with component array or null if error
      */
-    fun generateScreenComponents(userPrompt: String): String? {
+    fun generateScreenComponents(userPrompt: String, image: BufferedImage? = null): String? {
 
-        val systemPrompt = buildSystemPrompt()
-        val fullPrompt = """
+        val systemPrompt = buildSystemPrompt(image != null)
+        val fullPrompt = if (image != null) {
+            """
+$systemPrompt
+
+User Request: $userPrompt
+
+IMPORTANT: Analyze the provided screenshot image and recreate the UI using ONLY the available components listed above.
+- Components should be listed from TOP to BOTTOM as they appear in the image
+- Match the layout, spacing, and order of elements
+- Use appropriate component types based on visual appearance
+- Generate ONLY valid JSON response with components array. No explanation, no markdown, just JSON.
+        """.trimIndent()
+        } else {
+            """
 $systemPrompt
 
 User Request: $userPrompt
 
 Generate ONLY valid JSON response with components array. No explanation, no markdown, just JSON.
         """.trimIndent()
+        }
 
         try {
+            val parts = mutableListOf<Map<String, Any>>()
+            parts.add(mapOf("text" to fullPrompt))
+
+            // Add image if provided
+            if (image != null) {
+                val base64Image = encodeImageToBase64(image)
+                parts.add(mapOf(
+                    "inline_data" to mapOf(
+                        "mime_type" to "image/jpeg",
+                        "data" to base64Image
+                    )
+                ))
+            }
+
             val requestBody = mapOf(
                 "contents" to listOf(
-                    mapOf("parts" to listOf(mapOf("text" to fullPrompt)))
+                    mapOf("parts" to parts)
                 )
             )
 
@@ -60,6 +95,37 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
         } catch (e: Exception) {
             throw RuntimeException("Failed to generate components: ${e.message}", e)
         }
+    }
+
+    /**
+     * Encodes BufferedImage to base64 string
+     */
+    private fun encodeImageToBase64(image: BufferedImage): String {
+        val outputStream = ByteArrayOutputStream()
+
+        // Convert to RGB if image has alpha channel (transparency)
+        val rgbImage = if (image.type == BufferedImage.TYPE_INT_ARGB || image.type == BufferedImage.TYPE_4BYTE_ABGR) {
+            val convertedImage = BufferedImage(image.width, image.height, BufferedImage.TYPE_INT_RGB)
+            val g2d = convertedImage.createGraphics()
+            g2d.drawImage(image, 0, 0, null)
+            g2d.dispose()
+            convertedImage
+        } else {
+            image
+        }
+
+        // Write as JPEG
+        val success = ImageIO.write(rgbImage, "jpeg", outputStream)
+        if (!success) {
+            throw RuntimeException("Failed to encode image to JPEG")
+        }
+
+        val bytes = outputStream.toByteArray()
+        if (bytes.isEmpty()) {
+            throw RuntimeException("Image encoding resulted in empty bytes")
+        }
+
+        return Base64.getEncoder().encodeToString(bytes)
     }
 
     /**
@@ -97,9 +163,25 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
     /**
      * Builds the system prompt with component schema and examples
      */
-    private fun buildSystemPrompt(): String {
+    private fun buildSystemPrompt(hasImage: Boolean = false): String {
+        val imageInstruction = if (hasImage) {
+            """
+You are a mobile banking screen designer assistant. Your task is to analyze the provided screenshot image and recreate the UI using the available components.
+
+IMPORTANT IMAGE ANALYSIS INSTRUCTIONS:
+- Carefully examine the screenshot to identify all UI elements from TOP to BOTTOM
+- List components in the EXACT ORDER they appear in the image (top to bottom)
+- Match the visual appearance to the appropriate component type
+- Text fields → TEXTFIELD, Amount inputs → AMOUNT_FIELD, Dropdowns → COMBO_BOX, Buttons → BUTTON, etc.
+- Extract visible text for titles, labels, and button text
+- If you see a component that doesn't match available types, use the closest match
+            """.trimIndent()
+        } else {
+            "You are a mobile banking screen designer assistant. Your task is to generate screen components based on user descriptions."
+        }
+
         return """
-You are a mobile banking screen designer assistant. Your task is to generate screen components based on user descriptions.
+$imageInstruction
 
 IMPORTANT: All properties are OPTIONAL except where noted. Only include properties you need - missing properties will use default values. The user can edit all properties later.
 
@@ -130,11 +212,12 @@ AVAILABLE COMPONENTS:
    - hideFraction: boolean (default: false)
 
 3. COMBO_BOX - Dropdown selector
-   Example: {"type": "COMBO_BOX", "properties": {"identifier": "FROM_ACCOUNT", "title": "Hesap Seçin"}}
+   Example: {"type": "${ComboBoxComponent.type}", "properties": {"identifier": "FROM_ACCOUNT", "title": "Hesap Seçin", "items": "Hesap 1,Hesap 2,Hesap 3"}}
    All Properties:
-   - identifier: string (default: "COMBOBOX")
+   - identifier: string (default: "${ComboBoxComponent.type}")
    - title: string (default: "Select option")
-   - items: string (comma-separated, default: "Option 1,Option 2,Option 3")
+   - disable: boolean (default: false)
+   - items: string (comma-separated values like "Item1,Item2,Item3", default: "Option 1,Option 2,Option 3")
    - selectedIndex: number (default: 0)
    - placeholder: string (default: "Please select")
    - showPlaceholderAsFirstItem: boolean (default: false)
@@ -152,9 +235,9 @@ AVAILABLE COMPONENTS:
    - maxDate: string (default: "")
 
 5. CHECKBOX - Checkbox with optional popup
-   Example: {"type": "CHECKBOX", "properties": {"identifier": "TERMS_AGREE", "text": "Şartları kabul ediyorum", "required": true}}
+   Example: {"type": "${CheckBoxComponent.type}", "properties": {"identifier": "TERMS_AGREE", "text": "Şartları kabul ediyorum", "required": true}}
    All Properties:
-   - identifier: string (default: "CHECKBOX")
+   - identifier: string (default: "${CheckBoxComponent.type}")
    - text: string (default: "Checkbox Text")
    - underlineText: string (default: "")
    - descriptionText: string (default: "")
