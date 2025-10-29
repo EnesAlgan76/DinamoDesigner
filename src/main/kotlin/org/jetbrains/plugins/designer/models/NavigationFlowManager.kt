@@ -4,12 +4,10 @@ class NavigationFlowManager(private val screenManager: ScreenManager) {
     private val connections = mutableListOf<Connection>()
 
     fun addConnection(sourceScreenId: String, targetScreenId: String, componentId: String, label: String?) {
-        // Validate screens exist
         if (!validateConnection(sourceScreenId, targetScreenId)) {
             throw IllegalArgumentException("Invalid connection: screens not found")
         }
 
-        // Remove existing connection for this component
         removeConnection(componentId)
 
         val connection = Connection(
@@ -48,13 +46,11 @@ class NavigationFlowManager(private val screenManager: ScreenManager) {
     }
 
     fun validateConnection(sourceScreenId: String, targetScreenId: String): Boolean {
-        // Check if both screens exist
         val sourceExists = screenManager.getScreen(sourceScreenId) != null
         val targetExists = screenManager.getScreen(targetScreenId) != null
 
         if (!sourceExists || !targetExists) return false
 
-        // Prevent self-connection
         if (sourceScreenId == targetScreenId) return false
 
         return true

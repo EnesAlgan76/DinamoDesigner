@@ -31,19 +31,16 @@ class AnimatedCard(
     }
 
     private fun createContent() {
-        // Title
         val titleLabel = JLabel(title).apply {
             font = Font("SF Pro Display", Font.BOLD, 16)
             foreground = JBColor(Color(30, 41, 59), Color(241, 245, 249))
             horizontalAlignment = SwingConstants.CENTER
         }
 
-        // Content
         val contentLabel = JLabel("<html><center><div style='font-size: 24px;'>🎨</div><br/><span style='color: #64748b;'>Card</span></center></html>").apply {
             horizontalAlignment = SwingConstants.CENTER
         }
 
-        // Delete button
         val deleteButton = object : JButton("×") {
             override fun paintComponent(g: Graphics) {
                 val g2d = g as Graphics2D
@@ -135,7 +132,6 @@ class AnimatedCard(
     }
 
     fun animateIn() {
-        // Simple fade in
         var alpha = 0f
         val timer = Timer(16) {
             alpha += 0.05f
@@ -187,24 +183,20 @@ class AnimatedCard(
         val g2d = g as Graphics2D
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
-        // Shadow
         val shadowOffset = (4 + animationProgress * 8).toInt()
         val shadowAlpha = (20 + animationProgress * 30).toInt()
 
         g2d.color = Color(0, 0, 0, shadowAlpha)
         g2d.fillRoundRect(shadowOffset, shadowOffset, width - shadowOffset, height - shadowOffset, 20, 20)
 
-        // Card background
         val bgAlpha = (240 + animationProgress * 15).toInt()
         g2d.color = JBColor(Color(255, 255, 255, bgAlpha), Color(30, 31, 34, bgAlpha))
         g2d.fillRoundRect(0, 0, width, height, 20, 20)
 
-        // Border
         val borderAlpha = (100 + animationProgress * 100).toInt()
         g2d.color = JBColor(Color(200, 200, 255, borderAlpha), Color(100, 150, 255, borderAlpha))
         g2d.drawRoundRect(0, 0, width - 1, height - 1, 20, 20)
 
-        // Inner highlight
         g2d.color = Color(255, 255, 255, (30 + animationProgress * 50).toInt())
         g2d.drawRoundRect(1, 1, width - 3, height - 3, 18, 18)
 

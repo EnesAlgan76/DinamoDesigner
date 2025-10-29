@@ -41,7 +41,7 @@ object CheckBoxComponent : ComponentDefinition {
                 ImageIcon(resource)
             }
         } catch (e: Exception) {
-            ImageIcon() // Empty icon as fallback
+            ImageIcon()
         }
     }
 

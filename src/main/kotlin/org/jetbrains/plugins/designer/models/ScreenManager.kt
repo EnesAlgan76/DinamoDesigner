@@ -18,14 +18,12 @@ class ScreenManager {
     fun removeScreen(screenId: String): Boolean {
         val screen = screens.find { it.id == screenId } ?: return false
 
-        // Don't allow removing the last screen
         if (screens.size == 1) {
             return false
         }
 
         val removed = screens.remove(screen)
 
-        // If removed screen was selected, select first screen
         if (selectedScreenId == screenId && screens.isNotEmpty()) {
             selectedScreenId = screens[0].id
         }

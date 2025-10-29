@@ -47,7 +47,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
         contentPane.background = Color(0, 0, 255)
         contentPane = createMainLayout()
         initializeDefaultScreen()
-
         startPreviewServer()
     }
 
@@ -98,7 +97,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             preferredSize = Dimension(360, 0)
             border = JBUI.Borders.empty(15)
 
-            // Screen List Panel
             screenListPanel = ScreenListPanel(
                 screenManager = screenManager,
                 onScreenSelected = { screen -> onScreenSelected(screen) },
@@ -107,7 +105,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             )
             add(screenListPanel, BorderLayout.NORTH)
 
-            // Component Library Panel
             libraryPanel = ComponentLibraryPanel()
 
             val scrollPane = JScrollPane(libraryPanel).apply {
@@ -147,11 +144,9 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             isOpaque = false
             border = JBUI.Borders.empty(0, 15, 0, 10)
 
-            // Top toolbar
             val toolbar = createCanvasToolbar()
             add(toolbar, BorderLayout.NORTH)
 
-            // Canvas Panel
             canvasPanel = CanvasPanel(
                 componentManager = componentManager,
                 onComponentSelected = { component -> onComponentSelected(component) },
@@ -174,11 +169,9 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                 val g2d = g as Graphics2D
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
-                // Modern flat background
                 g2d.color = JBColor(Color(255, 255, 255, 240), Color(30, 30, 32, 240))
                 g2d.fillRoundRect(0, 0, width, height, 20, 20)
 
-                // Subtle shadow effect
                 g2d.color = JBColor(Color(0, 0, 0, 10), Color(0, 0, 0, 30))
                 g2d.drawRoundRect(0, 0, width - 1, height - 1, 20, 20)
             }
@@ -280,7 +273,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             val titleLabel = StyledLabel("Properties", 16, Font.BOLD)
             add(titleLabel, BorderLayout.NORTH)
 
-            // Properties Panel
             propertiesPanel = PropertiesPanel(
                 onPropertyChanged = { component, key, value ->
                     onPropertyChanged(component, key, value)
@@ -294,7 +286,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             }
             add(scrollPane, BorderLayout.CENTER)
 
-            // Code Preview Panel
             codePreviewPanel = CodePreviewPanel(
                 onGenerateCode = {
                     val flowCode = generateCode()
@@ -305,8 +296,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             add(codePreviewPanel, BorderLayout.SOUTH)
         }
     }
-
-    // ========== INITIALIZATION ==========
 
     private fun initializeDefaultScreen() {
         val defaultScreen = Screen(
@@ -326,7 +315,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
 
 
     private fun showAddScreenDialog() {
-        // Mevcut ekranları dialog'a geç
         val dialog = AddScreenDialog(screenManager.getAllScreens())
 
         if (dialog.showAndGet()) {
@@ -355,7 +343,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
     }
 
     private fun showEditScreenDialog(screen: Screen) {
-        // Mevcut ekranları dialog'a geç
         val dialog = EditScreenDialog(screen, screenManager.getAllScreens())
 
         if (dialog.showAndGet()) {
@@ -367,7 +354,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                     screenListPanel.refreshScreenList()
                     propertiesPanel.setAvailableScreens(screenManager.getAllScreens())
 
-                    // Refresh canvas if this is the selected screen
                     if (screenManager.getSelectedScreen()?.id == updatedScreen.id) {
                         canvasPanel.loadScreen(updatedScreen)
                     }
@@ -393,11 +379,8 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
         propertiesPanel.setAvailableScreens(screenManager.getAllScreens())
         selectedComponent = null
 
-        // Send preview when screen is selected
         sendPreviewToClients(screen)
     }
-
-    // ========== COMPONENT OPERATIONS ==========
 
     private fun onComponentSelected(component: ComponentInstance) {
         selectedComponent = component
@@ -414,7 +397,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
         componentManager.updateComponentProperty(component.id, key, value, selectedScreen)
         canvasPanel.refreshComponents()
 
-        // If targetScreen changed, update navigation
         if (key == "targetScreen" && value is String) {
             if (value.isNotEmpty()) {
                 navigationManager.addConnection(
@@ -444,7 +426,7 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
         val screens = screenManager.getAllScreens()
 
         if (screens.isEmpty()) {
-            return "// No screens to generate. Please add screens first."
+            return "No screens to generate. Please add screens first."
         }
 
         val flowName = getFlowNameFromActiveEditor()
@@ -463,7 +445,7 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
         val screens = screenManager.getAllScreens()
 
         if (screens.isEmpty()) {
-            return "// No screens available"
+            return "No screens available"
         }
 
         val flowName = getFlowNameFromActiveEditor()
@@ -552,10 +534,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
 
                 importedScreens.forEach { screen ->
                     screenManager.addScreen(screen)
-
-                    screen.components.forEach { component ->
-                        val id = component.id.substringAfter("_").toIntOrNull() ?: 0
-                    }
                 }
 
                 screenListPanel.refreshScreenList()
@@ -630,7 +608,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
 
             if (generatedJson != null) {
                 try {
-                    // Validate JSON first
                     if (!org.jetbrains.plugins.designer.services.ComponentJsonParser.validateJson(generatedJson)) {
                         throw IllegalArgumentException("Invalid JSON format")
                     }
@@ -641,7 +618,6 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                         componentManager
                     )
 
-                    // Refresh canvas
                     canvasPanel.loadScreen(selectedScreen)
                     propertiesPanel.showEmptyState()
 
@@ -665,7 +641,4 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             }
         }
     }
-
-    // ========== DIALOG ACTIONS ==========
-
 }

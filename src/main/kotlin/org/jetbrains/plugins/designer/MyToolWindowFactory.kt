@@ -22,7 +22,6 @@ import javax.swing.border.EmptyBorder
 class MyToolWindowFactory : ToolWindowFactory {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        // Only show main menu
         val mainMenu = MainMenuWindow(project)
         val content = ContentFactory.getInstance().createContent(mainMenu.getContent(), "", false)
         toolWindow.contentManager.addContent(content)
@@ -49,12 +48,10 @@ class MyToolWindowFactory : ToolWindowFactory {
                 border = JBUI.Borders.empty(60, 40, 40, 40)
             }
 
-            // Center content with cards
             val centerPanel = JPanel().apply {
                 layout = BoxLayout(this, BoxLayout.Y_AXIS)
                 isOpaque = false
 
-                // Logo/Title
                 val logoPanel = JPanel().apply {
                     layout = BoxLayout(this, BoxLayout.Y_AXIS)
                     isOpaque = false
@@ -79,7 +76,6 @@ class MyToolWindowFactory : ToolWindowFactory {
                 add(logoPanel)
                 add(Box.createVerticalStrut(60))
 
-                // Cards Grid
                 val cardsPanel = JPanel(GridLayout(2, 2, 24, 24)).apply {
                     isOpaque = false
                     maximumSize = Dimension(800, 500)
@@ -118,7 +114,6 @@ class MyToolWindowFactory : ToolWindowFactory {
                     "Stay tuned",
                     Color(148, 163, 184)
                 ) {
-                    // Future feature
                 })
 
                 add(cardsPanel)
@@ -202,13 +197,11 @@ class MyToolWindowFactory : ToolWindowFactory {
                     val g2d = g as Graphics2D
                     g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
-                    // Shadow with hover effect
                     val shadowAlpha = (15 + hoverProgress * 25).toInt()
                     val shadowOffset = (4 + hoverProgress * 8).toInt()
                     g2d.color = Color(0, 0, 0, shadowAlpha)
                     g2d.fillRoundRect(shadowOffset, shadowOffset, width - shadowOffset, height - shadowOffset, 20, 20)
 
-                    // Card background
                     val bgColor = if (accentColor == Color(148, 163, 184)) {
                         JBColor(Color(255, 255, 255, 200), Color(40, 44, 52, 200))
                     } else {
@@ -217,14 +210,12 @@ class MyToolWindowFactory : ToolWindowFactory {
                     g2d.color = bgColor
                     g2d.fillRoundRect(0, 0, width, height, 20, 20)
 
-                    // Accent border with hover glow
                     val borderAlpha = (100 + hoverProgress * 155).toInt()
                     g2d.color = Color(accentColor.red, accentColor.green, accentColor.blue, borderAlpha)
                     val strokeWidth = 2f + hoverProgress * 1f
                     g2d.setStroke(BasicStroke(strokeWidth))
                     g2d.drawRoundRect(1, 1, width - 3, height - 3, 20, 20)
 
-                    // Hover gradient overlay
                     if (hoverProgress > 0) {
                         val overlayAlpha = (hoverProgress * 40).toInt()
                         g2d.color = Color(accentColor.red, accentColor.green, accentColor.blue, overlayAlpha)
@@ -244,7 +235,6 @@ class MyToolWindowFactory : ToolWindowFactory {
         }
 
         private fun openIfCounter() {
-            // Open If Counter tool (can be implemented later)
             JOptionPane.showMessageDialog(
                 toolWindowContent,
                 "If Counter feature - Coming soon!",

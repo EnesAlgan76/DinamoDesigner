@@ -26,12 +26,6 @@ class GeminiService(private val project: Project) {
         private const val API_KEY = "AIzaSyC4vF8rN_tW19_amk0273pWg3ewK2pY_hw"
     }
 
-    /**
-     * Generates screen components based on user description
-     * @param userPrompt User's description of what they want
-     * @param image Optional screenshot image for visual analysis
-     * @return JSON string with component array or null if error
-     */
     fun generateScreenComponents(userPrompt: String, image: BufferedImage? = null): String? {
 
         val systemPrompt = buildSystemPrompt(image != null)
@@ -61,7 +55,6 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
             val parts = mutableListOf<Map<String, Any>>()
             parts.add(mapOf("text" to fullPrompt))
 
-            // Add image if provided
             if (image != null) {
                 val base64Image = encodeImageToBase64(image)
                 parts.add(mapOf(
@@ -97,13 +90,9 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
         }
     }
 
-    /**
-     * Encodes BufferedImage to base64 string
-     */
     private fun encodeImageToBase64(image: BufferedImage): String {
         val outputStream = ByteArrayOutputStream()
 
-        // Convert to RGB if image has alpha channel (transparency)
         val rgbImage = if (image.type == BufferedImage.TYPE_INT_ARGB || image.type == BufferedImage.TYPE_4BYTE_ABGR) {
             val convertedImage = BufferedImage(image.width, image.height, BufferedImage.TYPE_INT_RGB)
             val g2d = convertedImage.createGraphics()
@@ -114,7 +103,6 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
             image
         }
 
-        // Write as JPEG
         val success = ImageIO.write(rgbImage, "jpeg", outputStream)
         if (!success) {
             throw RuntimeException("Failed to encode image to JPEG")
@@ -128,9 +116,6 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
         return Base64.getEncoder().encodeToString(bytes)
     }
 
-    /**
-     * Extracts JSON content from Gemini API response
-     */
     private fun extractJsonFromResponse(responseBody: String): String? {
         try {
             val jsonResponse = JsonParser.parseString(responseBody).asJsonObject
@@ -144,7 +129,6 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
                 if (parts != null && parts.size() > 0) {
                     val text = parts[0].asJsonObject.get("text").asString
 
-                    // Clean up markdown code blocks if present
                     val cleanText = text
                         .replace("```json", "")
                         .replace("```", "")
@@ -160,9 +144,6 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
         }
     }
 
-    /**
-     * Builds the system prompt with component schema and examples
-     */
     private fun buildSystemPrompt(hasImage: Boolean = false): String {
         val imageInstruction = if (hasImage) {
             """

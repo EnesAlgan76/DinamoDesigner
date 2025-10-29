@@ -22,15 +22,13 @@ class EditScreenDialog(
         typeComboBox.selectedItem = screen.type
         updateNextScreenOptions()
 
-        // Mevcut next screen'i seç
         screen.nextScreenId?.let { nextId ->
             val index = existingScreens.indexOfFirst { it.id == nextId }
             if (index >= 0) {
-                nextScreenComboBox.selectedIndex = index  // +1 for "-- None --" option
+                nextScreenComboBox.selectedIndex = index
             }
         }
 
-        // Screen Type değiştiğinde Next Screen seçeneklerini güncelle
         typeComboBox.addActionListener {
             updateNextScreenOptions()
         }
@@ -44,7 +42,6 @@ class EditScreenDialog(
 
         val selectedType = typeComboBox.selectedItem as? ScreenType
 
-        // Sadece Form ekranlar için next screen seçeneği göster
         if (selectedType == ScreenType.Form) {
             existingScreens.filter { it.id != screen.id }.forEach { otherScreen ->
                 nextScreenComboBox.addItem("${otherScreen.name} (${otherScreen.type})")
@@ -74,7 +71,6 @@ class EditScreenDialog(
         panel.add(descriptionField)
         panel.add(Box.createVerticalStrut(10))
 
-        // Next Screen seçeneği (sadece Form ekranlar için)
         panel.add(JLabel("Next Screen (Form Only):"))
         nextScreenComboBox.preferredSize = Dimension(380, 30)
         panel.add(nextScreenComboBox)
@@ -107,9 +103,8 @@ class EditScreenDialog(
             return null
         }
 
-        // Next Screen seçimini al (sadece Form ekranlar için)
         val nextScreenId = if (type == ScreenType.Form && nextScreenComboBox.selectedIndex > 0) {
-            val selectedIndex = nextScreenComboBox.selectedIndex - 1  // "-- None --" offset'i
+            val selectedIndex = nextScreenComboBox.selectedIndex - 1
             existingScreens.filter { it.id != screen.id }.getOrNull(selectedIndex)?.id
         } else {
             null

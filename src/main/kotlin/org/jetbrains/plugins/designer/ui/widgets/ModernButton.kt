@@ -58,15 +58,12 @@ class ModernButton(
         val alpha = (200 + animationProgress * 55).toInt()
         val shadowOffset = (2 + animationProgress * 3).toInt()
 
-        // Shadow
         g2d.color = Color(0, 0, 0, (30 + animationProgress * 20).toInt())
         g2d.fillRoundRect(shadowOffset, shadowOffset, width - shadowOffset, height - shadowOffset, 12, 12)
 
-        // Button background
         g2d.color = Color(baseColor.red, baseColor.green, baseColor.blue, alpha)
         g2d.fillRoundRect(0, 0, width, height, 12, 12)
 
-        // Border highlight
         g2d.color = Color(255, 255, 255, (50 + animationProgress * 50).toInt())
         g2d.drawRoundRect(0, 0, width - 1, height - 1, 12, 12)
 

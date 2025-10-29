@@ -19,7 +19,6 @@ class AddScreenDialog(private val existingScreens: List<Screen> = emptyList()) :
         title = "Add New Screen"
         updateNextScreenOptions()
 
-        // Screen Type değiştiğinde Next Screen seçeneklerini güncelle
         typeComboBox.addActionListener {
             updateNextScreenOptions()
         }
@@ -33,7 +32,6 @@ class AddScreenDialog(private val existingScreens: List<Screen> = emptyList()) :
 
         val selectedType = typeComboBox.selectedItem as? ScreenType
 
-        // Sadece Form ekranlar için next screen seçeneği göster
         if (selectedType == ScreenType.Form) {
             existingScreens.forEach { screen ->
                 nextScreenComboBox.addItem("${screen.name} (${screen.type})")
@@ -63,7 +61,6 @@ class AddScreenDialog(private val existingScreens: List<Screen> = emptyList()) :
         panel.add(descriptionField)
         panel.add(Box.createVerticalStrut(10))
 
-        // Next Screen seçeneği (sadece Form ekranlar için)
         panel.add(JLabel("Next Screen (Form Only):"))
         nextScreenComboBox.preferredSize = Dimension(380, 30)
         panel.add(nextScreenComboBox)
@@ -96,9 +93,8 @@ class AddScreenDialog(private val existingScreens: List<Screen> = emptyList()) :
             return null
         }
 
-        // Next Screen seçimini al (sadece Form ekranlar için)
         val nextScreenId = if (type == ScreenType.Form && nextScreenComboBox.selectedIndex > 0) {
-            val selectedIndex = nextScreenComboBox.selectedIndex - 1  // "-- None --" offset'i
+            val selectedIndex = nextScreenComboBox.selectedIndex - 1
             existingScreens.getOrNull(selectedIndex)?.id
         } else {
             null

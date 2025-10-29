@@ -14,10 +14,6 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
-/**
- * Screen Flow Visualizer - Ekranlar arası navigasyon akışını görselleştirir
- * HTML'deki Connected Cards benzeri bir deneyim sunar
- */
 class ScreenFlowVisualizerDialog(
     project: Project,
     private val screens: List<Screen>
@@ -40,7 +36,6 @@ class ScreenFlowVisualizerDialog(
     }
 
     private fun initializeCards() {
-        // Create cards for each screen
         screens.forEachIndexed { index, screen ->
             val x = 150 + (index % 4) * 250
             val y = 150 + (index / 4) * 200
@@ -48,9 +43,7 @@ class ScreenFlowVisualizerDialog(
             cards.add(card)
         }
 
-        // Create connections based on navigation
         screens.forEach { screen ->
-            // 1. Next Screen bağlantıları (Form ekranlar için default continue button)
             if (screen.type == ScreenType.Form && screen.nextScreenId != null) {
                 val sourceCard = cards.find { it.screen.id == screen.id }
                 val targetCard = cards.find { it.screen.id == screen.nextScreenId }
@@ -60,7 +53,6 @@ class ScreenFlowVisualizerDialog(
                 }
             }
 
-            // 2. Button component bağlantıları
             screen.components.forEach { component ->
                 val targetScreenId = component.properties["targetScreen"] as? String
                 if (!targetScreenId.isNullOrEmpty()) {
@@ -68,7 +60,6 @@ class ScreenFlowVisualizerDialog(
                     val targetCard = cards.find { it.screen.id == targetScreenId }
 
                     if (sourceCard != null && targetCard != null) {
-                        // Button label'ı varsa onu kullan
                         val buttonLabel = component.properties["text"] as? String
                         connections.add(Connection(sourceCard, targetCard, buttonLabel))
                     }
@@ -185,12 +176,11 @@ class ScreenFlowVisualizerDialog(
 
             val isContinueConnection = connection.label == "Continue"
             val lineColor = if (isContinueConnection) {
-                JBColor(Color(46, 204, 113, 180), Color(46, 204, 113, 180))  // Yeşil
+                JBColor(Color(46, 204, 113, 180), Color(46, 204, 113, 180))
             } else {
-                JBColor(Color(52, 152, 219, 180), Color(52, 152, 219, 180))  // Mavi
+                JBColor(Color(52, 152, 219, 180), Color(52, 152, 219, 180))
             }
 
-            // Ana çizgi - Dashed pattern ile yön gösterme
             g2d.color = lineColor
             g2d.stroke = BasicStroke(
                 3f,
@@ -205,7 +195,7 @@ class ScreenFlowVisualizerDialog(
             g2d.draw(curve)
 
             val angle = atan2(endY - ctrl2Y, endX - ctrl2X)
-            val arrowSize = 16  // 12'den 16'ya çıkardık
+            val arrowSize = 16
 
             val arrow = Polygon()
             arrow.addPoint(endX.toInt(), endY.toInt())
@@ -222,9 +212,9 @@ class ScreenFlowVisualizerDialog(
             g2d.fill(arrow)
 
             val arrowBorderColor = if (isContinueConnection) {
-                JBColor(Color(39, 174, 96), Color(39, 174, 96))  // Koyu yeşil
+                JBColor(Color(39, 174, 96), Color(39, 174, 96))
             } else {
-                JBColor(Color(41, 128, 185), Color(41, 128, 185))  // Koyu mavi
+                JBColor(Color(41, 128, 185), Color(41, 128, 185))
             }
             g2d.color = arrowBorderColor
             g2d.draw(arrow)
@@ -235,9 +225,9 @@ class ScreenFlowVisualizerDialog(
         private fun drawDirectionArrows(g2d: Graphics2D, curve: CubicCurve2D.Double, isContinue: Boolean = false) {
             val numArrows = 2
             val arrowColor = if (isContinue) {
-                JBColor(Color(46, 204, 113, 200), Color(46, 204, 113, 200))  // Yeşil
+                JBColor(Color(46, 204, 113, 200), Color(46, 204, 113, 200))
             } else {
-                JBColor(Color(52, 152, 219, 200), Color(52, 152, 219, 200))  // Mavi
+                JBColor(Color(52, 152, 219, 200), Color(52, 152, 219, 200))
             }
             g2d.color = arrowColor
 
@@ -286,12 +276,10 @@ class ScreenFlowVisualizerDialog(
             val w = card.width
             val h = card.height
 
-            // Shadow
             val shadowOffset = if (isHovered || isDragged) 8 else 4
             g2d.color = Color(0, 0, 0, if (isHovered || isDragged) 40 else 20)
             g2d.fillRoundRect(x + shadowOffset, y + shadowOffset, w, h, 15, 15)
 
-            // Card background
             val bgColor = when (card.screen.type) {
                 ScreenType.Form -> JBColor(Color(59, 130, 246), Color(59, 130, 246))
                 ScreenType.Confirm -> JBColor(Color(245, 158, 11), Color(245, 158, 11))
@@ -303,12 +291,10 @@ class ScreenFlowVisualizerDialog(
             g2d.color = if (isHovered || isDragged) bgColor.brighter() else bgColor
             g2d.fillRoundRect(x, y, w, h, 15, 15)
 
-            // Border
             g2d.color = Color(255, 255, 255, if (isHovered || isDragged) 150 else 80)
             g2d.stroke = BasicStroke(if (isHovered || isDragged) 3f else 2f)
             g2d.drawRoundRect(x, y, w - 1, h - 1, 15, 15)
 
-            // Text
             g2d.color = Color.WHITE
             g2d.font = Font("SF Pro Display", Font.BOLD, 14)
 
@@ -322,7 +308,6 @@ class ScreenFlowVisualizerDialog(
             val typeWidth = metrics.stringWidth(typeText)
             g2d.drawString(typeText, x + (w - typeWidth) / 2, y + 50)
 
-            // Component count
             g2d.font = Font("SF Pro Display", Font.PLAIN, 10)
             val componentCount = "${card.screen.components.size} components"
             val countWidth = metrics.stringWidth(componentCount)
@@ -330,7 +315,6 @@ class ScreenFlowVisualizerDialog(
         }
 
         private fun drawInfoPanel(g2d: Graphics2D) {
-            // Stats panel
             g2d.color = JBColor(Color(255, 255, 255, 220), Color(40, 40, 40, 220))
             g2d.fillRoundRect(20, 20, 200, 100, 12, 12)
 
@@ -342,7 +326,6 @@ class ScreenFlowVisualizerDialog(
             g2d.drawString("Screens: ${cards.size}", 35, 70)
             g2d.drawString("Connections: ${connections.size}", 35, 90)
 
-            // Controls panel
             g2d.color = JBColor(Color(255, 255, 255, 220), Color(40, 40, 40, 220))
             g2d.fillRoundRect(width - 220, 20, 200, 80, 12, 12)
 

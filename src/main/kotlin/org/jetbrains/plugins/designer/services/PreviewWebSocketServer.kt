@@ -40,7 +40,6 @@ class PreviewWebSocketServer(port: Int = 8080) : WebSocketServer(InetSocketAddre
                     component.properties.toMutableMap().apply {
                         put("inputType", component.type)
 
-                        // Convert items string to JSONArray for ComboBox
                         if (component.type == "ComboBoxInput" && containsKey("items")) {
                             val itemsStr = get("items") as? String ?: ""
                             if (itemsStr.isNotEmpty()) {

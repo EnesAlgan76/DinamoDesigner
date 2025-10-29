@@ -19,8 +19,6 @@ object DesignPersistence {
     private const val FILE_EXTENSION = "dinamo"
     private const val FILE_DESCRIPTION = "Dinamo Design Files (*.dinamo)"
 
-    // ========== EXPORT ==========
-
     fun exportDesign(screens: List<Screen>, parentComponent: Component?) {
         if (screens.isEmpty()) {
             showErrorDialog("No screens to export", parentComponent)
@@ -58,12 +56,10 @@ object DesignPersistence {
         if (result == JFileChooser.APPROVE_OPTION) {
             var file = fileChooser.selectedFile
 
-            // Add extension if not present
             if (!file.name.endsWith(".$FILE_EXTENSION")) {
                 file = File(file.absolutePath + ".$FILE_EXTENSION")
             }
 
-            // Confirm overwrite if file exists
             if (file.exists()) {
                 val overwrite = JOptionPane.showConfirmDialog(
                     parentComponent,
@@ -93,8 +89,6 @@ object DesignPersistence {
             false
         }
     }
-
- 
 
     fun importDesign(parentComponent: Component?): List<Screen>? {
         try {
@@ -161,24 +155,19 @@ object DesignPersistence {
     private fun validateDesignData(screens: List<Screen>): Boolean {
         if (screens.isEmpty()) return false
 
-        // Check for duplicate screen IDs
         val ids = screens.map { it.id }
         if (ids.size != ids.distinct().size) return false
 
-        // Check for duplicate screen names
         val names = screens.map { it.name }
         if (names.size != names.distinct().size) return false
 
-        // Validate each screen
         screens.forEach { screen ->
             if (screen.id.isBlank()) return false
             if (screen.name.isBlank()) return false
 
-            // Check for duplicate component IDs within screen
             val componentIds = screen.components.map { it.id }
             if (componentIds.size != componentIds.distinct().size) return false
 
-            // Validate each component
             screen.components.forEach { component ->
                 if (component.id.isBlank()) return false
                 if (component.type.isBlank()) return false
@@ -187,8 +176,6 @@ object DesignPersistence {
 
         return true
     }
-
-    // ========== DIALOGS ==========
 
     private fun showErrorDialog(message: String, parentComponent: Component?) {
         JOptionPane.showMessageDialog(
@@ -208,8 +195,6 @@ object DesignPersistence {
         )
     }
 }
-
-// ========== JSON SERIALIZATION HELPERS ==========
 
 internal object JsonSerializer {
 
