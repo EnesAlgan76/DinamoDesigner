@@ -1,6 +1,6 @@
 <plugins>
     <plugin id="com.enesalgan.dinamodesigner"
-            url="https://github.com/EnesAlgan76/DinamoDesigner/raw/main/build/distributions/IntelliJ%20Platform%20Plugin%20Template-2.3.3.zip"
+            url="https://github.com/EnesAlgan76/DinamoDesigner/raw/main/build/distributions/IntelliJ%20Platform%20Plugin%20Template-1.0.5.zip"
             version="1.0.5">
         <name>Dinamo Designer</name>
         <description>
