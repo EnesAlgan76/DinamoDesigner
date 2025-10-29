@@ -4,8 +4,9 @@
 .intellijPlatform
 .kotlin
 .qodana
-build/
+build/*
 !build/distributions/
+build/distributions/*
 !build/distributions/*.zip
 
 # Google Cloud credentials
