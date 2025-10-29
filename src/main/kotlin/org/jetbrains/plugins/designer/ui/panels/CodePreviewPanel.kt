@@ -14,7 +14,7 @@ class CodePreviewPanel(
         isEditable = false
         lineWrap = true
         wrapStyleWord = true
-        text = "// Generated flow code will appear here..."
+        text = ""
         background = JBColor(Color(248, 249, 250), Color(30, 30, 30))
         foreground = JBColor(Color(60, 60, 60), Color(200, 200, 200))
         border = JBUI.Borders.empty(10)
@@ -25,7 +25,7 @@ class CodePreviewPanel(
         isEditable = false
         lineWrap = true
         wrapStyleWord = true
-        text = "// ScreenActionImpl block will appear here..."
+        text = ""
         background = JBColor(Color(248, 249, 250), Color(30, 30, 30))
         foreground = JBColor(Color(60, 60, 60), Color(200, 200, 200))
         border = JBUI.Borders.empty(10)
