@@ -101,11 +101,11 @@ class MyToolWindowFactory : ToolWindowFactory {
 
                 cardsPanel.add(createFeatureCard(
                     "🔧",
-                    "Coming Soon",
-                    "More tools on the way",
-                    Color(148, 163, 184)
+                    "Service Generator",
+                    "Generate REST services from JSON",
+                    Color(236, 72, 153)
                 ) {
-                    // Future feature
+                    openServiceGenerator()
                 })
 
                 cardsPanel.add(createFeatureCard(
@@ -241,6 +241,13 @@ class MyToolWindowFactory : ToolWindowFactory {
                 "Info",
                 JOptionPane.INFORMATION_MESSAGE
             )
+        }
+
+        private fun openServiceGenerator() {
+            SwingUtilities.invokeLater {
+                val dialog = org.jetbrains.plugins.designer.ui.dialogs.ServiceGeneratorDialog(project)
+                dialog.show()
+            }
         }
 
         fun getContent(): JComponent = toolWindowContent
