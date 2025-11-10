@@ -16,20 +16,24 @@ import org.jetbrains.plugins.designer.codegen.CodeGenerator
 import org.jetbrains.plugins.designer.settings.PluginSettings
 import org.jetbrains.plugins.designer.settings.SettingsDialog
 import org.jetbrains.plugins.designer.services.PreviewServerManager
+import org.jetbrains.plugins.designer.services.EmulatorLauncher
+import org.jetbrains.plugins.designer.services.GitHubEmulatorInstaller
 import org.jetbrains.plugins.designer.ui.panels.AddScreenDialog
 import org.jetbrains.plugins.designer.ui.panels.EditScreenDialog
 import org.jetbrains.plugins.template.designer.DesignPersistence
 import org.jetbrains.plugins.template.designer.ui.*
 import java.awt.*
+import java.io.File
 import javax.swing.*
 import javax.swing.plaf.basic.BasicSplitPaneDivider
 import javax.swing.plaf.basic.BasicSplitPaneUI
-import kotlin.apply
 
 class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
 
     private val screenManager = ScreenManager()
     private val componentManager = ComponentManager()
+    private val emulatorInstaller = GitHubEmulatorInstaller(project)
+    private val emulatorLauncher = EmulatorLauncher(project)
     private val navigationManager = NavigationFlowManager(screenManager)
     private val previewServerManager = PreviewServerManager.getInstance(project)
 
@@ -44,6 +48,7 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
     init {
         title = "Dinamo Multi Enes2-Screen Designer"
         setSize(1400, 800)
+        checkSdkAndOfferSetup()
         contentPane.background = Color(0, 0, 255)
         contentPane = createMainLayout()
         initializeDefaultScreen()
@@ -186,6 +191,7 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                 layout = FlowLayout(FlowLayout.CENTER, 8, 0)
 
                 add(createModernIconButton("/icons/ai.svg", "AI", Color(147, 51, 234)) { showAIGeneration() })
+                add(createModernIconButton("/icons/flow.svg", "Run", Color(34, 197, 94)) { runEmulator() })
                 add(createModernIconButton("/icons/flow.svg", "Flow", Color(59, 130, 246)) { showScreenFlow() })
                 add(createModernIconButton("/icons/setting.svg", "Settings", Color(100, 116, 139)) { showSettings() })
                 add(createModernIconButton("/icons/export.svg", "Export", Color(100, 116, 139)) { exportDesign() })
@@ -645,4 +651,279 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             }
         }
     }
+
+
+    private fun runEmulator() {
+        // Check if emulator is installed (from GitHub or system)
+        var emulatorPath = emulatorInstaller.getEmulatorPath()
+
+     // if (emulatorPath == null) {
+     //     // Try system SDK
+     //     val sdkPath = findAndroidSdkPath()
+     //     if (sdkPath != null) {
+     //         emulatorPath = getEmulatorPath(sdkPath)
+     //     }
+     // }
+
+        if (emulatorPath == null) {
+            val result = JOptionPane.showConfirmDialog(
+                contentPane,
+                "Emulator not found.\nWould you like to download it from GitHub?",
+                "Emulator Required",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            )
+
+            if (result == JOptionPane.YES_OPTION) {
+                installEmulatorFromGitHub()
+            }
+            return
+        }
+
+        val finalEmulatorPath = emulatorPath
+
+        ApplicationManager.getApplication().executeOnPooledThread {
+            try {
+                val avds = listAvailableAvds(finalEmulatorPath)
+                if (avds.isEmpty()) {
+                    SwingUtilities.invokeLater {
+                        JOptionPane.showMessageDialog(
+                            contentPane,
+                            "No AVDs found. Please create an AVD using Android Studio or run the setup wizard.",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE
+                        )
+                    }
+                    return@executeOnPooledThread
+                }
+
+                SwingUtilities.invokeLater {
+                    // Show dialog to select AVD and app
+                    val dialog = showRunConfigDialog(avds)
+                    if (dialog != null) {
+                        val (avdName, apkPath, packageName, activityName) = dialog
+
+                        // Show progress dialog
+                        val progressDialog = JDialog(this, "Launching Emulator", true)
+                        val progressLabel = JLabel("Starting emulator...")
+                        val progressBar = JProgressBar().apply { isIndeterminate = true }
+
+                        progressDialog.apply {
+                            layout = BorderLayout(10, 10)
+                            add(progressLabel, BorderLayout.NORTH)
+                            add(progressBar, BorderLayout.CENTER)
+                            setSize(400, 100)
+                            setLocationRelativeTo(this@DinamoDesignerDialog)
+                        }
+
+                        // Launch in background
+                        Thread {
+                            emulatorLauncher.launchEmulatorWithApp(
+                                avdName = avdName,
+                                apkPath = apkPath,
+                                packageName = packageName,
+                                activityName = activityName,
+                                onSuccess = {
+                                    SwingUtilities.invokeLater {
+                                        progressDialog.dispose()
+                                        JOptionPane.showMessageDialog(
+                                            contentPane,
+                                            "Emulator started and app launched successfully!",
+                                            "Success",
+                                            JOptionPane.INFORMATION_MESSAGE
+                                        )
+                                    }
+                                },
+                                onError = { error ->
+                                    SwingUtilities.invokeLater {
+                                        progressDialog.dispose()
+                                        JOptionPane.showMessageDialog(
+                                            contentPane,
+                                            "Error: $error",
+                                            "Error",
+                                            JOptionPane.ERROR_MESSAGE
+                                        )
+                                    }
+                                }
+                            )
+                        }.start()
+
+                        progressDialog.isVisible = true
+                    }
+                }
+            } catch (e: Exception) {
+                SwingUtilities.invokeLater {
+                    JOptionPane.showMessageDialog(
+                        contentPane,
+                        "Error: ${e.message}",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE
+                    )
+                }
+            }
+        }
+    }
+
+    private fun showRunConfigDialog(avds: List<String>): RunConfig? {
+        val panel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            border = JBUI.Borders.empty(10)
+        }
+
+        // AVD Selection
+        panel.add(JLabel("Select AVD:"))
+        val avdCombo = JComboBox(avds.toTypedArray())
+        panel.add(avdCombo)
+        panel.add(Box.createVerticalStrut(15))
+
+        // APK Path
+        panel.add(JLabel("APK Path (optional):"))
+        val apkField = JTextField(30)
+        val apkPanel = JPanel(BorderLayout(5, 0)).apply {
+            add(apkField, BorderLayout.CENTER)
+            add(JButton("Browse").apply {
+                addActionListener {
+                    val fileChooser = JFileChooser().apply {
+                        fileFilter = javax.swing.filechooser.FileNameExtensionFilter("APK Files", "apk")
+                    }
+                    if (fileChooser.showOpenDialog(panel) == JFileChooser.APPROVE_OPTION) {
+                        apkField.text = fileChooser.selectedFile.absolutePath
+                    }
+                }
+            }, BorderLayout.EAST)
+        }
+        panel.add(apkPanel)
+        panel.add(Box.createVerticalStrut(10))
+
+        // Package Name
+        panel.add(JLabel("Package Name (e.g., com.example.app):"))
+        val packageField = JTextField(30)
+        panel.add(packageField)
+        panel.add(Box.createVerticalStrut(10))
+
+        // Activity Name
+        panel.add(JLabel("Main Activity (e.g., .MainActivity):"))
+        val activityField = JTextField(30)
+        panel.add(activityField)
+        panel.add(Box.createVerticalStrut(10))
+
+        panel.add(JLabel("<html><i>Leave APK fields empty to just start the emulator</i></html>").apply {
+            foreground = JBColor.GRAY
+        })
+
+        val result = JOptionPane.showConfirmDialog(
+            contentPane,
+            panel,
+            "Run Configuration",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.PLAIN_MESSAGE
+        )
+
+        if (result == JOptionPane.OK_OPTION) {
+            val avdName = avdCombo.selectedItem?.toString() ?: return null
+            val apkPath = apkField.text.takeIf { it.isNotBlank() }
+            val packageName = packageField.text.takeIf { it.isNotBlank() }
+            val activityName = activityField.text.takeIf { it.isNotBlank() }
+
+            return RunConfig(avdName, apkPath, packageName, activityName)
+        }
+
+        return null
+    }
+
+    private data class RunConfig(
+        val avdName: String,
+        val apkPath: String?,
+        val packageName: String?,
+        val activityName: String?
+    )
+
+    private fun checkSdkAndOfferSetup() {
+        // Check on startup if emulator is installed
+        if (!emulatorInstaller.isEmulatorInstalled()) {
+            SwingUtilities.invokeLater {
+                val result = JOptionPane.showConfirmDialog(
+                    contentPane,
+                    """
+                    Android Emulator not found!
+                    
+                    Would you like to install the emulator now?
+                    It will be installed to: ~/dinamoemulator
+                    
+                    This is completely independent from your system Android installation.
+                    
+                    (You can also do this later from the Run button)
+                    """.trimIndent(),
+                    "Setup Emulator",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
+                )
+
+                if (result == JOptionPane.YES_OPTION) {
+                    installEmulatorFromGitHub()
+                }
+            }
+        }
+    }
+
+    private fun installEmulatorFromGitHub() {
+        emulatorInstaller.installEmulator { success, message ->
+            SwingUtilities.invokeLater {
+                if (success) {
+                    JOptionPane.showMessageDialog(
+                        contentPane,
+                        "Emulator installed successfully!\nLocation: $message",
+                        "Installation Complete",
+                        JOptionPane.INFORMATION_MESSAGE
+                    )
+                } else {
+                    JOptionPane.showMessageDialog(
+                        contentPane,
+                        "Installation failed: $message",
+                        "Installation Error",
+                        JOptionPane.ERROR_MESSAGE
+                    )
+                }
+            }
+        }
+    }
+
+
+    private fun listAvailableAvds(emulatorPath: String): List<String> {
+        try {
+            // First try to use emulator -list-avds command
+            val processBuilder = ProcessBuilder(emulatorPath, "-list-avds")
+
+            // Set environment to use our custom AVD location
+            val sdkPath = emulatorPath.substringBeforeLast("/emulator")
+            processBuilder.environment()["ANDROID_AVD_HOME"] = "$sdkPath/avd"
+            processBuilder.environment()["ANDROID_SDK_ROOT"] = sdkPath
+
+            val process = processBuilder.start()
+            val output = process.inputStream.bufferedReader().readText()
+            process.waitFor()
+
+            val avdList = output.lines()
+                .filter { it.isNotBlank() }
+                .map { it.trim() }
+
+            // If emulator command doesn't work, manually scan our AVD directory
+            if (avdList.isEmpty()) {
+                val avdDir = File("$sdkPath/avd")
+                if (avdDir.exists()) {
+                    return avdDir.listFiles()
+                        ?.filter { it.name.endsWith(".ini") && it.name != "Dinamo_Pixel_5.ini" }
+                        ?.map { it.name.substringBeforeLast(".ini") }
+                        ?: listOf("Dinamo_Pixel_5") // Return default if nothing found
+                }
+            }
+
+            return avdList
+        } catch (_: Exception) {
+            // If all fails, return the default AVD we create
+            return listOf("Dinamo_Pixel_5")
+        }
+    }
+
+
 }
