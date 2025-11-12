@@ -45,8 +45,12 @@ class MyToolWindowFactory : ToolWindowFactory {
         private fun createUI() {
             val mainPanel = JPanel(BorderLayout()).apply {
                 isOpaque = false
-                border = JBUI.Borders.empty(60, 40, 40, 40)
+                border = JBUI.Borders.empty(40, 40, 30, 40)
             }
+
+            // Small backend config in top right corner
+            val topRightPanel = createBackendConfigPanel()
+            mainPanel.add(topRightPanel, BorderLayout.NORTH)
 
             val centerPanel = JPanel().apply {
                 layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -58,27 +62,27 @@ class MyToolWindowFactory : ToolWindowFactory {
                     alignmentX = Component.CENTER_ALIGNMENT
 
                     val iconLabel = JLabel("⚡").apply {
-                        font = font.deriveFont(72f)
+                        font = font.deriveFont(56f)
                         alignmentX = Component.CENTER_ALIGNMENT
                     }
 
                     val titleLabel = JBLabel("EA Suite").apply {
-                        font = Font("SF Pro Display", Font.BOLD, 32)
+                        font = Font("SF Pro Display", Font.BOLD, 28)
                         foreground = JBColor(Color(30, 41, 59), Color(241, 245, 249))
                         alignmentX = Component.CENTER_ALIGNMENT
                     }
 
                     add(iconLabel)
-                    add(Box.createVerticalStrut(16))
+                    add(Box.createVerticalStrut(12))
                     add(titleLabel)
                 }
 
                 add(logoPanel)
-                add(Box.createVerticalStrut(60))
+                add(Box.createVerticalStrut(40))
 
-                val cardsPanel = JPanel(GridLayout(2, 2, 24, 24)).apply {
+                val cardsPanel = JPanel(GridLayout(2, 2, 20, 20)).apply {
                     isOpaque = false
-                    maximumSize = Dimension(800, 500)
+                    maximumSize = Dimension(700, 380)
                 }
 
                 cardsPanel.add(createFeatureCard(
@@ -123,6 +127,123 @@ class MyToolWindowFactory : ToolWindowFactory {
             toolWindowContent.add(mainPanel, BorderLayout.CENTER)
         }
 
+        private fun createBackendConfigPanel(): JPanel {
+            return JPanel(FlowLayout(FlowLayout.RIGHT, 8, 8)).apply {
+                isOpaque = false
+                maximumSize = Dimension(600, 40)
+
+                add(JBLabel("⚙️").apply {
+                    font = font.deriveFont(16f)
+                    toolTipText = "Backend Change"
+                })
+
+                val changeNoField = JTextField(8).apply {
+                    toolTipText = "Change no (örn: 144252)"
+                    font = Font("SF Pro Display", Font.PLAIN, 12)
+                    background = JBColor(Color(255, 255, 255), Color(45, 48, 54))
+                    foreground = JBColor(Color(71, 85, 105), Color(203, 213, 225))
+                    border = BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(JBColor(Color(203, 213, 225), Color(71, 85, 105)), 1),
+                        JBUI.Borders.empty(4, 8)
+                    )
+                }
+                add(changeNoField)
+
+                add(JButton("✓").apply {
+                    font = Font("SF Pro Display", Font.BOLD, 16)
+                    foreground = Color.WHITE
+                    background = Color(34, 197, 94)
+                    preferredSize = Dimension(32, 28)
+                    toolTipText = "Uygula"
+                    isOpaque = true
+                    isBorderPainted = false
+                    cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                    isFocusPainted = false
+
+                    addMouseListener(object : MouseAdapter() {
+                        override fun mouseEntered(e: MouseEvent) {
+                            background = Color(22, 163, 74)
+                        }
+                        override fun mouseExited(e: MouseEvent) {
+                            background = Color(34, 197, 94)
+                        }
+                    })
+
+                    addActionListener {
+                        val defaultPath = "/Users/enesalgan/Projeler/DinamoDesigner/src/main/kotlin/org/jetbrains/plugins/turkiyefinans.properties"
+                        applyBackendChanges(defaultPath, changeNoField.text)
+                    }
+                })
+            }
+        }
+
+        private fun applyBackendChanges(filePath: String, changeNo: String) {
+            if (filePath.isBlank() || changeNo.isBlank()) {
+                JOptionPane.showMessageDialog(
+                    toolWindowContent,
+                    "Lütfen dosya yolu ve change numarasını girin",
+                    "Eksik Bilgi",
+                    JOptionPane.WARNING_MESSAGE
+                )
+                return
+            }
+
+            try {
+                val file = java.io.File(filePath)
+                if (!file.exists()) {
+                    JOptionPane.showMessageDialog(
+                        toolWindowContent,
+                        "Dosya bulunamadı: $filePath",
+                        "Hata",
+                        JOptionPane.ERROR_MESSAGE
+                    )
+                    return
+                }
+
+                val cleanChangeNo = changeNo.replace(Regex("[^0-9]"), "")
+
+                if (cleanChangeNo.isEmpty()) {
+                    JOptionPane.showMessageDialog(
+                        toolWindowContent,
+                        "Lütfen geçerli bir change numarası girin (örn: 144252)",
+                        "Geçersiz Giriş",
+                        JOptionPane.WARNING_MESSAGE
+                    )
+                    return
+                }
+
+                val content = file.readText()
+                val updatedContent = content.replace(Regex("Dev-\\d+"), "Dev-$cleanChangeNo")
+
+                val changeNumber = cleanChangeNo.toIntOrNull()
+                val appTestReplacement = if (changeNumber != null && changeNumber % 2 == 0) {
+                    "apptest2"
+                } else {
+                    "apptest"
+                }
+
+                val finalContent = updatedContent.replace(Regex("https://apptest2?\\."), "https://$appTestReplacement.")
+
+                file.writeText(finalContent)
+
+                JOptionPane.showMessageDialog(
+                    toolWindowContent,
+                    "Backend konfigürasyonu başarıyla güncellendi!\n\n" +
+                            "Change No: Dev-$cleanChangeNo\n" +
+                            "App Environment: $appTestReplacement",
+                    "Başarılı",
+                    JOptionPane.INFORMATION_MESSAGE
+                )
+            } catch (e: Exception) {
+                JOptionPane.showMessageDialog(
+                    toolWindowContent,
+                    "Dosya güncellenirken hata oluştu: ${e.message}",
+                    "Hata",
+                    JOptionPane.ERROR_MESSAGE
+                )
+            }
+        }
+
         private fun createFeatureCard(emoji: String, title: String, subtitle: String, accentColor: Color, action: () -> Unit): JPanel {
             return object : JPanel() {
                 private var isHovered = false
@@ -143,34 +264,34 @@ class MyToolWindowFactory : ToolWindowFactory {
                     layout = BorderLayout()
                     isOpaque = false
                     cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-                    preferredSize = Dimension(360, 220)
+                    preferredSize = Dimension(330, 180)
 
                     val contentPanel = JPanel().apply {
                         layout = BoxLayout(this, BoxLayout.Y_AXIS)
                         isOpaque = false
-                        border = JBUI.Borders.empty(32)
+                        border = JBUI.Borders.empty(28, 24, 28, 24)
 
                         val emojiLabel = JLabel(emoji).apply {
-                            font = font.deriveFont(56f)
+                            font = font.deriveFont(52f)
                             alignmentX = Component.CENTER_ALIGNMENT
                         }
 
                         val titleLabel = JBLabel(title).apply {
-                            font = Font("SF Pro Display", Font.BOLD, 22)
+                            font = Font("SF Pro Display", Font.BOLD, 20)
                             foreground = JBColor(Color(30, 41, 59), Color(241, 245, 249))
                             alignmentX = Component.CENTER_ALIGNMENT
                         }
 
                         val subtitleLabel = JBLabel(subtitle).apply {
-                            font = Font("SF Pro Display", Font.PLAIN, 14)
+                            font = Font("SF Pro Display", Font.PLAIN, 13)
                             foreground = JBColor(Color(100, 116, 139), Color(148, 163, 184))
                             alignmentX = Component.CENTER_ALIGNMENT
                         }
 
                         add(emojiLabel)
-                        add(Box.createVerticalStrut(20))
+                        add(Box.createVerticalStrut(16))
                         add(titleLabel)
-                        add(Box.createVerticalStrut(8))
+                        add(Box.createVerticalStrut(6))
                         add(subtitleLabel)
                     }
 
