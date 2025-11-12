@@ -31,16 +31,13 @@ class EmulatorLauncher(private val project: Project) {
                     return@Thread
                 }
 
-                // Start emulator
                 println("🚀 Starting emulator: $avdName")
                 val processBuilder = ProcessBuilder(emulatorPath, "-avd", avdName)
 
-                // Set environment variables to use our custom paths - completely independent from system
-                processBuilder.environment()["ANDROID_SDK_ROOT"] = sdkPath
-                processBuilder.environment()["ANDROID_AVD_HOME"] = "$sdkPath/avd"
-                processBuilder.environment()["ANDROID_EMULATOR_HOME"] = "$sdkPath/avd"
+                processBuilder.environment()["ANDROID_SDK_ROOT"] = "$sdkPath/dinamoemulator"
+                processBuilder.environment()["ANDROID_AVD_HOME"] = "$sdkPath/dinamoemulator/avd"
+                processBuilder.environment()["ANDROID_EMULATOR_HOME"] = "$sdkPath/dinamoemulator/avd"
 
-                // Remove any system Android paths if they exist
                 processBuilder.environment().remove("ANDROID_SDK_HOME")
 
                 println("📍 Using AVD location: $sdkPath/avd")
@@ -48,7 +45,6 @@ class EmulatorLauncher(private val project: Project) {
 
                 processBuilder.start()
 
-                // Wait for emulator to boot
                 println("⏳ Waiting for emulator to boot...")
                 val deviceSerial = waitForEmulatorBoot(sdkPath)
 
@@ -59,13 +55,11 @@ class EmulatorLauncher(private val project: Project) {
 
                 println("✅ Emulator booted: $deviceSerial")
 
-                // Install and launch app if provided
                 if (apkPath != null && packageName != null && activityName != null) {
                     println("📦 Installing APK...")
                     if (installApk(sdkPath, deviceSerial, apkPath)) {
                         println("✅ APK installed")
 
-                        // Wait for installation
                         Thread.sleep(2000)
 
                         println("🚀 Launching app...")
@@ -90,37 +84,19 @@ class EmulatorLauncher(private val project: Project) {
     }
 
     private fun findSdkPath(): String? {
-        // First check if we installed it
-        val installerPath = installer.getEmulatorPath()?.substringBeforeLast("/emulator")
-        if (installerPath != null) return installerPath
-
-        // Check environment variables
-        System.getenv("ANDROID_HOME")?.let { return it }
-        System.getenv("ANDROID_SDK_ROOT")?.let { return it }
-
-        // Check common locations
-        val homeDir = System.getProperty("user.home")
-        val possiblePaths = listOf(
-            "$homeDir/dinamoemulator",  // Our custom location
-            "$homeDir/Library/Android/sdk",
-            "$homeDir/Android/Sdk",
-            "/opt/android-sdk"
-        )
-
-        return possiblePaths.firstOrNull { File(it).exists() }
+        return "/Users/enesalgan/dinamoemulator"
     }
 
     private fun getEmulatorPath(sdkPath: String): String? {
         val emulatorExe = if (SystemInfo.isWindows) "emulator.exe" else "emulator"
-        val emulatorPath = File(sdkPath, "emulator/$emulatorExe")
+        val emulatorPath = File(sdkPath, "dinamoemulator/emulator/$emulatorExe")
         return if (emulatorPath.exists()) emulatorPath.absolutePath else null
     }
 
-    private fun waitForEmulatorBoot(sdkPath: String, timeoutSeconds: Int = 120): String? {
+    private fun waitForEmulatorBoot(sdkPath: String, timeoutSeconds: Int = 60): String? {
         val adbPath = getAdbPath(sdkPath) ?: return null
         val startTime = System.currentTimeMillis()
 
-        // Wait for device to appear
         var deviceSerial: String? = null
         while (System.currentTimeMillis() - startTime < timeoutSeconds * 1000 / 2) {
             try {
@@ -138,14 +114,12 @@ class EmulatorLauncher(private val project: Project) {
                     break
                 }
             } catch (_: Exception) {
-                // Continue waiting
             }
             Thread.sleep(2000)
         }
 
         if (deviceSerial == null) return null
 
-        // Wait for boot completion
         println("⏳ Waiting for boot completion...")
         while (System.currentTimeMillis() - startTime < timeoutSeconds * 1000) {
             try {
@@ -161,7 +135,6 @@ class EmulatorLauncher(private val project: Project) {
                     return deviceSerial
                 }
             } catch (_: Exception) {
-                // Continue waiting
             }
             Thread.sleep(2000)
         }
@@ -215,9 +188,7 @@ class EmulatorLauncher(private val project: Project) {
 
     private fun getAdbPath(sdkPath: String): String? {
         val adbExe = if (SystemInfo.isWindows) "adb.exe" else "adb"
-        val adbPath = File(sdkPath, "platform-tools/$adbExe")
+        val adbPath = File(sdkPath, "dinamoemulator/platform-tools/$adbExe")
         return if (adbPath.exists()) adbPath.absolutePath else null
     }
 }
-
-

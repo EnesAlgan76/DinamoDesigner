@@ -11,11 +11,10 @@ import javax.swing.SwingUtilities
 
 class GitHubEmulatorInstaller(private val project: Project) {
 
-    private val emulatorInstallPath = System.getProperty("user.home") + "/dinamoemulator"
+    private val emulatorInstallPath = "/Users/enesalgan/dinamoemulator"
 
     companion object {
-        // Local emulator zip file path - embedded in plugin
-        private const val LOCAL_EMULATOR_ZIP = "/Users/enesalgan/Projeler/DinamoDesigner/src/main/kotlin/org/jetbrains/plugins/template/dinamoemulator.zip"
+        private const val LOCAL_EMULATOR_ZIP = "/Users/enesalgan/dinamoemulator.zip"
     }
 
     fun isEmulatorInstalled(): Boolean {
@@ -25,40 +24,45 @@ class GitHubEmulatorInstaller(private val project: Project) {
     }
 
     fun installEmulator(onComplete: (Boolean, String?) -> Unit) {
-        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Installing emulator from local file", true) {
+        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Setting up Android Emulator", true) {
             override fun run(indicator: ProgressIndicator) {
                 try {
-                    indicator.text = "Checking local emulator file..."
-                    indicator.fraction = 0.1
+                    indicator.text = "Checking ZIP file..."
+                    indicator.fraction = 0.05
 
-                    val localZip = File(LOCAL_EMULATOR_ZIP)
-                    if (!localZip.exists()) {
+                    val zipFile = File(LOCAL_EMULATOR_ZIP)
+                    if (!zipFile.exists()) {
                         SwingUtilities.invokeLater {
-                            onComplete(false, "Local emulator file not found: $LOCAL_EMULATOR_ZIP")
+                            onComplete(false, "ZIP file not found: $LOCAL_EMULATOR_ZIP\nPlease make sure dinamoemulator.zip exists in /Users/enesalgan/")
                         }
                         return
                     }
 
-                    indicator.text = "Creating installation directory..."
-                    indicator.fraction = 0.2
-
-                    val emulatorDir = File(emulatorInstallPath)
-                    emulatorDir.mkdirs()
+                    indicator.text = "Cleaning up old installation..."
+                    indicator.fraction = 0.1
+                    val installDir = File(emulatorInstallPath)
+                    if (installDir.exists()) {
+                        installDir.deleteRecursively()
+                    }
 
                     indicator.text = "Extracting emulator files..."
-                    indicator.fraction = 0.3
+                    indicator.fraction = 0.2
 
-                    extractZip(localZip, emulatorDir, indicator, 0.3, 0.7)
+                    extractAndFlattenZip(zipFile, installDir, indicator, 0.2, 0.6)
+
+                    indicator.text = "Setting up platforms directory..."
+                    indicator.fraction = 0.6
+                    createPlatformsDirectory()
 
                     indicator.text = "Setting executable permissions..."
                     indicator.fraction = 0.7
-                    setExecutablePermissions(emulatorDir)
+                    setAllExecutablePermissions()
 
                     indicator.text = "Creating default AVD..."
-                    indicator.fraction = 0.9
+                    indicator.fraction = 0.85
                     createDefaultAvd()
 
-                    indicator.text = "Installation complete!"
+                    indicator.text = "Setup complete!"
                     indicator.fraction = 1.0
 
                     SwingUtilities.invokeLater {
@@ -68,14 +72,14 @@ class GitHubEmulatorInstaller(private val project: Project) {
                 } catch (e: Exception) {
                     e.printStackTrace()
                     SwingUtilities.invokeLater {
-                        onComplete(false, "Installation failed: ${e.message}")
+                        onComplete(false, "Setup failed: ${e.message}")
                     }
                 }
             }
         })
     }
 
-    private fun extractZip(
+    private fun extractAndFlattenZip(
         zipFile: File,
         destDir: File,
         indicator: ProgressIndicator,
@@ -86,15 +90,34 @@ class GitHubEmulatorInstaller(private val project: Project) {
             val entries = zip.entries().toList()
             val totalEntries = entries.size
 
+            val rootPrefix = entries
+                .firstOrNull { !it.isDirectory }
+                ?.name
+                ?.substringBefore("/", "")
+                ?.let { if (it.isNotEmpty()) "$it/" else "" }
+                ?: ""
+
             entries.forEachIndexed { index, entry ->
-                val file = File(destDir, entry.name)
+                if (entry.name.contains("__MACOSX") || entry.name.contains(".DS_Store")) {
+                    return@forEachIndexed
+                }
+
+                val relativePath = if (rootPrefix.isNotEmpty() && entry.name.startsWith(rootPrefix)) {
+                    entry.name.substring(rootPrefix.length)
+                } else {
+                    entry.name
+                }
+
+                if (relativePath.isEmpty()) return@forEachIndexed
+
+                val targetFile = File(destDir, "dinamoemulator/$relativePath")
 
                 if (entry.isDirectory) {
-                    file.mkdirs()
+                    targetFile.mkdirs()
                 } else {
-                    file.parentFile?.mkdirs()
+                    targetFile.parentFile?.mkdirs()
                     zip.getInputStream(entry).use { input ->
-                        file.outputStream().use { output ->
+                        targetFile.outputStream().use { output ->
                             input.copyTo(output)
                         }
                     }
@@ -102,35 +125,94 @@ class GitHubEmulatorInstaller(private val project: Project) {
 
                 val progress = (index + 1).toDouble() / totalEntries
                 indicator.fraction = startFraction + (progress * (endFraction - startFraction))
+                indicator.text2 = "Extracting: $relativePath"
             }
         }
     }
 
-    private fun setExecutablePermissions(dir: File) {
+    private fun setAllExecutablePermissions() {
         if (SystemInfo.isWindows) return
 
-        // Set executable permissions for emulator and related binaries
-        val executablePatterns = listOf("emulator", "adb", "avdmanager", "sdkmanager")
+        try {
+            val emulatorDir = File(emulatorInstallPath, "dinamoemulator")
 
-        dir.walkTopDown().forEach { file ->
-            if (file.isFile) {
-                executablePatterns.forEach { pattern ->
-                    if (file.name.contains(pattern)) {
+            val criticalExecutables = listOf(
+                "emulator/emulator",
+                "emulator/crashpad_handler",
+                "emulator/crashreport",
+                "emulator/emulator-check",
+                "emulator/mksdcard",
+                "emulator/netsimd",
+                "emulator/nimble_bridge",
+                "platform-tools/adb"
+            )
+
+            criticalExecutables.forEach { path ->
+                val file = File(emulatorDir, path)
+                if (file.exists()) {
+                    file.setExecutable(true)
+                    println("✅ Set executable: ${file.name}")
+                }
+            }
+
+            val qemuDir = File(emulatorDir, "emulator/qemu/darwin-aarch64")
+            if (qemuDir.exists()) {
+                qemuDir.listFiles()?.forEach { file ->
+                    if (file.isFile) {
                         file.setExecutable(true)
+                        println("✅ Set executable: qemu/${file.name}")
                     }
                 }
             }
+
+            listOf("emulator/lib64", "emulator/bin64").forEach { dirPath ->
+                val libDir = File(emulatorDir, dirPath)
+                if (libDir.exists()) {
+                    libDir.listFiles()?.forEach { file ->
+                        if (file.isFile) {
+                            file.setExecutable(true)
+                        }
+                    }
+                }
+            }
+
+            println("✅ All executable permissions set successfully")
+        } catch (e: Exception) {
+            println("⚠️ Failed to set some executable permissions: ${e.message}")
+        }
+    }
+
+    private fun createPlatformsDirectory() {
+        try {
+            val platformsDir = File(emulatorInstallPath, "dinamoemulator/platforms/android-35")
+            platformsDir.mkdirs()
+
+            val buildProp = File(platformsDir, "build.prop")
+            buildProp.writeText("""
+                ro.build.version.sdk=35
+                ro.build.version.codename=REL
+            """.trimIndent())
+
+            val sourceProps = File(platformsDir, "source.properties")
+            sourceProps.writeText("""
+                Pkg.Desc=Android SDK Platform 35
+                Pkg.UserSrc=false
+                Pkg.Revision=1
+                AndroidVersion.ApiLevel=35
+            """.trimIndent())
+
+            println("✅ Created platforms directory")
+        } catch (e: Exception) {
+            println("⚠️ Failed to create platforms directory: ${e.message}")
         }
     }
 
     private fun createDefaultAvd() {
         try {
-            // Create AVD directory inside our custom emulator installation
-            val avdDir = File(emulatorInstallPath, "avd/Dinamo_Pixel_5.avd")
+            val avdDir = File(emulatorInstallPath, "dinamoemulator/avd/Dinamo_Pixel_5.avd")
             avdDir.mkdirs()
 
-            // Create config.ini with absolute path to system images
-            val systemImagesPath = File(emulatorInstallPath, "system-images/android-33/google_apis/x86_64")
+            val systemImagesPath = File(emulatorInstallPath, "dinamoemulator/android-35/google_apis_playstore/arm64-v8a")
             val configIni = File(avdDir, "config.ini")
             configIni.writeText("""
                 avd.ini.encoding=UTF-8
@@ -140,19 +222,18 @@ class GitHubEmulatorInstaller(private val project: Project) {
                 hw.lcd.width=1080
                 image.sysdir.1=${systemImagesPath.absolutePath}/
                 skin.name=1080x2340
-                tag.display=Google APIs
-                tag.id=google_apis
-                abi.type=x86_64
-                hw.cpu.arch=x86_64
+                tag.display=Google Play
+                tag.id=google_apis_playstore
+                abi.type=arm64-v8a
+                hw.cpu.arch=arm64
                 disk.dataPartition.size=6G
                 hw.ramSize=2048
                 hw.keyboard=yes
                 hw.gpu.enabled=yes
-                hw.gpu.mode=host
+                hw.gpu.mode=swiftshader_indirect
             """.trimIndent())
 
-            // Create AVD ini file in our custom location
-            val avdIni = File(emulatorInstallPath, "avd/Dinamo_Pixel_5.ini")
+            val avdIni = File(emulatorInstallPath, "dinamoemulator/avd/Dinamo_Pixel_5.ini")
             avdIni.parentFile.mkdirs()
             avdIni.writeText("path=${avdDir.absolutePath}\n")
 
@@ -175,9 +256,8 @@ class GitHubEmulatorInstaller(private val project: Project) {
         if (!isEmulatorInstalled()) return null
 
         val adbExe = if (SystemInfo.isWindows) "adb.exe" else "adb"
-        val adbPath = File(emulatorInstallPath, "platform-tools/$adbExe")
+        val adbPath = File(emulatorInstallPath, "dinamoemulator/platform-tools/$adbExe")
 
         return if (adbPath.exists()) adbPath.absolutePath else null
     }
 }
-

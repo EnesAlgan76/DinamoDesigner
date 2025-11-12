@@ -682,86 +682,55 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
 
         val finalEmulatorPath = emulatorPath
 
-        ApplicationManager.getApplication().executeOnPooledThread {
-            try {
-                val avds = listAvailableAvds(finalEmulatorPath)
-                if (avds.isEmpty()) {
+        // Use default AVD directly - no dialog needed
+        val defaultAvdName = "Dinamo_Pixel_5"
+
+        // Show progress dialog
+        val progressDialog = JDialog(this, "Launching Emulator", true)
+        val progressLabel = JLabel("Starting emulator with $defaultAvdName...")
+        val progressBar = JProgressBar().apply { isIndeterminate = true }
+
+        progressDialog.apply {
+            layout = BorderLayout(10, 10)
+            add(progressLabel, BorderLayout.NORTH)
+            add(progressBar, BorderLayout.CENTER)
+            setSize(400, 100)
+            setLocationRelativeTo(this@DinamoDesignerDialog)
+        }
+
+        // Launch in background
+        Thread {
+            emulatorLauncher.launchEmulatorWithApp(
+                                avdName = defaultAvdName,
+                                apkPath = null,
+                                packageName = null,
+                                activityName = null,
+                onSuccess = {
                     SwingUtilities.invokeLater {
+                        progressDialog.dispose()
                         JOptionPane.showMessageDialog(
                             contentPane,
-                            "No AVDs found. Please create an AVD using Android Studio or run the setup wizard.",
+                            "Emulator started successfully!",
+                            "Success",
+                            JOptionPane.INFORMATION_MESSAGE
+                        )
+                    }
+                },
+                onError = { error ->
+                    SwingUtilities.invokeLater {
+                        progressDialog.dispose()
+                        JOptionPane.showMessageDialog(
+                            contentPane,
+                            "Error: $error",
                             "Error",
                             JOptionPane.ERROR_MESSAGE
                         )
                     }
-                    return@executeOnPooledThread
                 }
+            )
+        }.start()
 
-                SwingUtilities.invokeLater {
-                    // Show dialog to select AVD and app
-                    val dialog = showRunConfigDialog(avds)
-                    if (dialog != null) {
-                        val (avdName, apkPath, packageName, activityName) = dialog
-
-                        // Show progress dialog
-                        val progressDialog = JDialog(this, "Launching Emulator", true)
-                        val progressLabel = JLabel("Starting emulator...")
-                        val progressBar = JProgressBar().apply { isIndeterminate = true }
-
-                        progressDialog.apply {
-                            layout = BorderLayout(10, 10)
-                            add(progressLabel, BorderLayout.NORTH)
-                            add(progressBar, BorderLayout.CENTER)
-                            setSize(400, 100)
-                            setLocationRelativeTo(this@DinamoDesignerDialog)
-                        }
-
-                        // Launch in background
-                        Thread {
-                            emulatorLauncher.launchEmulatorWithApp(
-                                avdName = avdName,
-                                apkPath = apkPath,
-                                packageName = packageName,
-                                activityName = activityName,
-                                onSuccess = {
-                                    SwingUtilities.invokeLater {
-                                        progressDialog.dispose()
-                                        JOptionPane.showMessageDialog(
-                                            contentPane,
-                                            "Emulator started and app launched successfully!",
-                                            "Success",
-                                            JOptionPane.INFORMATION_MESSAGE
-                                        )
-                                    }
-                                },
-                                onError = { error ->
-                                    SwingUtilities.invokeLater {
-                                        progressDialog.dispose()
-                                        JOptionPane.showMessageDialog(
-                                            contentPane,
-                                            "Error: $error",
-                                            "Error",
-                                            JOptionPane.ERROR_MESSAGE
-                                        )
-                                    }
-                                }
-                            )
-                        }.start()
-
-                        progressDialog.isVisible = true
-                    }
-                }
-            } catch (e: Exception) {
-                SwingUtilities.invokeLater {
-                    JOptionPane.showMessageDialog(
-                        contentPane,
-                        "Error: ${e.message}",
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE
-                    )
-                }
-            }
-        }
+        progressDialog.isVisible = true
     }
 
     private fun showRunConfigDialog(avds: List<String>): RunConfig? {
@@ -895,9 +864,9 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             val processBuilder = ProcessBuilder(emulatorPath, "-list-avds")
 
             // Set environment to use our custom AVD location
-            val sdkPath = emulatorPath.substringBeforeLast("/emulator")
-            processBuilder.environment()["ANDROID_AVD_HOME"] = "$sdkPath/avd"
-            processBuilder.environment()["ANDROID_SDK_ROOT"] = sdkPath
+            val sdkPath = "/Users/enesalgan/dinamoemulator"
+            processBuilder.environment()["ANDROID_AVD_HOME"] = "$sdkPath/dinamoemulator/avd"
+            processBuilder.environment()["ANDROID_SDK_ROOT"] = "$sdkPath/dinamoemulator"
 
             val process = processBuilder.start()
             val output = process.inputStream.bufferedReader().readText()
