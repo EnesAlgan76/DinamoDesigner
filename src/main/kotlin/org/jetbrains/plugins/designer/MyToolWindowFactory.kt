@@ -48,7 +48,6 @@ class MyToolWindowFactory : ToolWindowFactory {
                 border = JBUI.Borders.empty(40, 40, 30, 40)
             }
 
-            // Small backend config in top right corner
             val topRightPanel = createBackendConfigPanel()
             mainPanel.add(topRightPanel, BorderLayout.NORTH)
 
@@ -128,24 +127,73 @@ class MyToolWindowFactory : ToolWindowFactory {
         }
 
         private fun createBackendConfigPanel(): JPanel {
-            return JPanel(FlowLayout(FlowLayout.RIGHT, 8, 8)).apply {
+            return JPanel(FlowLayout(FlowLayout.RIGHT, 10, 8)).apply {
                 isOpaque = false
-                maximumSize = Dimension(600, 40)
+                maximumSize = Dimension(450, 50)
 
                 add(JBLabel("⚙️").apply {
-                    font = font.deriveFont(16f)
+                    font = font.deriveFont(14f)
                     toolTipText = "Backend Change"
+                })
+
+                val filePathField = JTextField(20).apply {
+                    text = "/Users/enesalgan/Projeler/DinamoDesigner/src/main/kotlin/org/jetbrains/plugins/turkiyefinans.properties"
+                    toolTipText = "Properties dosya yolu"
+                    font = Font("SF Pro Display", Font.PLAIN, 11)
+                    background = JBColor(Color(255, 255, 255), Color(45, 48, 54))
+                    foreground = JBColor(Color(71, 85, 105), Color(203, 213, 225))
+                    border = BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(JBColor(Color(203, 213, 225), Color(71, 85, 105)), 1, true),
+                        JBUI.Borders.empty(4, 8)
+                    )
+                    preferredSize = Dimension(200, 28)
+                }
+                add(filePathField)
+
+                add(JButton("📁").apply {
+                    font = font.deriveFont(16f)
+                    preferredSize = Dimension(32, 28)
+                    toolTipText = "Dosya seç"
+                    isBorderPainted = false
+                    isContentAreaFilled = false
+                    cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                    isFocusPainted = false
+
+                    addMouseListener(object : MouseAdapter() {
+                        override fun mouseEntered(e: MouseEvent) {
+                            background = JBColor(Color(241, 245, 249), Color(51, 65, 85))
+                            isContentAreaFilled = true
+                        }
+                        override fun mouseExited(e: MouseEvent) {
+                            isContentAreaFilled = false
+                        }
+                    })
+
+                    addActionListener {
+                        val fileChooser = JFileChooser().apply {
+                            fileSelectionMode = JFileChooser.FILES_ONLY
+                            currentDirectory = java.io.File("/Users/enesalgan/Projeler/DinamoDesigner/src/main/kotlin/org/jetbrains/plugins/")
+                            fileFilter = object : javax.swing.filechooser.FileFilter() {
+                                override fun accept(f: java.io.File) = f.isDirectory || f.name.endsWith(".properties")
+                                override fun getDescription() = "Properties (*.properties)"
+                            }
+                        }
+                        if (fileChooser.showOpenDialog(this@apply) == JFileChooser.APPROVE_OPTION) {
+                            filePathField.text = fileChooser.selectedFile.absolutePath
+                        }
+                    }
                 })
 
                 val changeNoField = JTextField(8).apply {
                     toolTipText = "Change no (örn: 144252)"
-                    font = Font("SF Pro Display", Font.PLAIN, 12)
+                    font = Font("SF Pro Display", Font.PLAIN, 11)
                     background = JBColor(Color(255, 255, 255), Color(45, 48, 54))
                     foreground = JBColor(Color(71, 85, 105), Color(203, 213, 225))
                     border = BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(JBColor(Color(203, 213, 225), Color(71, 85, 105)), 1),
+                        BorderFactory.createLineBorder(JBColor(Color(203, 213, 225), Color(71, 85, 105)), 1, true),
                         JBUI.Borders.empty(4, 8)
                     )
+                    preferredSize = Dimension(90, 28)
                 }
                 add(changeNoField)
 
@@ -153,12 +201,13 @@ class MyToolWindowFactory : ToolWindowFactory {
                     font = Font("SF Pro Display", Font.BOLD, 16)
                     foreground = Color.WHITE
                     background = Color(34, 197, 94)
-                    preferredSize = Dimension(32, 28)
+                    preferredSize = Dimension(36, 28)
                     toolTipText = "Uygula"
                     isOpaque = true
                     isBorderPainted = false
                     cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
                     isFocusPainted = false
+                    border = BorderFactory.createEmptyBorder()
 
                     addMouseListener(object : MouseAdapter() {
                         override fun mouseEntered(e: MouseEvent) {
@@ -170,8 +219,7 @@ class MyToolWindowFactory : ToolWindowFactory {
                     })
 
                     addActionListener {
-                        val defaultPath = "/Users/enesalgan/Projeler/DinamoDesigner/src/main/kotlin/org/jetbrains/plugins/turkiyefinans.properties"
-                        applyBackendChanges(defaultPath, changeNoField.text)
+                        applyBackendChanges(filePathField.text, changeNoField.text)
                     }
                 })
             }
