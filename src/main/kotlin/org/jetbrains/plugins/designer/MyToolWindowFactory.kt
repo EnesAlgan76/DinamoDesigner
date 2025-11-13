@@ -48,9 +48,6 @@ class MyToolWindowFactory : ToolWindowFactory {
                 border = JBUI.Borders.empty(40, 40, 30, 40)
             }
 
-            val topRightPanel = createBackendConfigPanel()
-            mainPanel.add(topRightPanel, BorderLayout.NORTH)
-
             val centerPanel = JPanel().apply {
                 layout = BoxLayout(this, BoxLayout.Y_AXIS)
                 isOpaque = false
@@ -112,11 +109,12 @@ class MyToolWindowFactory : ToolWindowFactory {
                 })
 
                 cardsPanel.add(createFeatureCard(
-                    "✨",
-                    "Coming Soon",
-                    "Stay tuned",
-                    Color(148, 163, 184)
+                    "🔄",
+                    "Backend Değiştir",
+                    "Change numarası ve ortam ayarları",
+                    Color(16, 185, 129)
                 ) {
+                    openBackendChanger()
                 })
 
                 add(cardsPanel)
@@ -126,169 +124,10 @@ class MyToolWindowFactory : ToolWindowFactory {
             toolWindowContent.add(mainPanel, BorderLayout.CENTER)
         }
 
-        private fun createBackendConfigPanel(): JPanel {
-            return JPanel(FlowLayout(FlowLayout.RIGHT, 10, 8)).apply {
-                isOpaque = false
-                maximumSize = Dimension(450, 50)
-
-                add(JBLabel("⚙️").apply {
-                    font = font.deriveFont(14f)
-                    toolTipText = "Backend Change"
-                })
-
-                val filePathField = JTextField(20).apply {
-                    text = "/Users/enesalgan/Projeler/DinamoDesigner/src/main/kotlin/org/jetbrains/plugins/turkiyefinans.properties"
-                    toolTipText = "Properties dosya yolu"
-                    font = Font("SF Pro Display", Font.PLAIN, 11)
-                    background = JBColor(Color(255, 255, 255), Color(45, 48, 54))
-                    foreground = JBColor(Color(71, 85, 105), Color(203, 213, 225))
-                    border = BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(JBColor(Color(203, 213, 225), Color(71, 85, 105)), 1, true),
-                        JBUI.Borders.empty(4, 8)
-                    )
-                    preferredSize = Dimension(200, 28)
-                }
-                add(filePathField)
-
-                add(JButton("📁").apply {
-                    font = font.deriveFont(16f)
-                    preferredSize = Dimension(32, 28)
-                    toolTipText = "Dosya seç"
-                    isBorderPainted = false
-                    isContentAreaFilled = false
-                    cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-                    isFocusPainted = false
-
-                    addMouseListener(object : MouseAdapter() {
-                        override fun mouseEntered(e: MouseEvent) {
-                            background = JBColor(Color(241, 245, 249), Color(51, 65, 85))
-                            isContentAreaFilled = true
-                        }
-                        override fun mouseExited(e: MouseEvent) {
-                            isContentAreaFilled = false
-                        }
-                    })
-
-                    addActionListener {
-                        val fileChooser = JFileChooser().apply {
-                            fileSelectionMode = JFileChooser.FILES_ONLY
-                            currentDirectory = java.io.File("/Users/enesalgan/Projeler/DinamoDesigner/src/main/kotlin/org/jetbrains/plugins/")
-                            fileFilter = object : javax.swing.filechooser.FileFilter() {
-                                override fun accept(f: java.io.File) = f.isDirectory || f.name.endsWith(".properties")
-                                override fun getDescription() = "Properties (*.properties)"
-                            }
-                        }
-                        if (fileChooser.showOpenDialog(this@apply) == JFileChooser.APPROVE_OPTION) {
-                            filePathField.text = fileChooser.selectedFile.absolutePath
-                        }
-                    }
-                })
-
-                val changeNoField = JTextField(8).apply {
-                    toolTipText = "Change no (örn: 144252)"
-                    font = Font("SF Pro Display", Font.PLAIN, 11)
-                    background = JBColor(Color(255, 255, 255), Color(45, 48, 54))
-                    foreground = JBColor(Color(71, 85, 105), Color(203, 213, 225))
-                    border = BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(JBColor(Color(203, 213, 225), Color(71, 85, 105)), 1, true),
-                        JBUI.Borders.empty(4, 8)
-                    )
-                    preferredSize = Dimension(90, 28)
-                }
-                add(changeNoField)
-
-                add(JButton("✓").apply {
-                    font = Font("SF Pro Display", Font.BOLD, 16)
-                    foreground = Color.WHITE
-                    background = Color(34, 197, 94)
-                    preferredSize = Dimension(36, 28)
-                    toolTipText = "Uygula"
-                    isOpaque = true
-                    isBorderPainted = false
-                    cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-                    isFocusPainted = false
-                    border = BorderFactory.createEmptyBorder()
-
-                    addMouseListener(object : MouseAdapter() {
-                        override fun mouseEntered(e: MouseEvent) {
-                            background = Color(22, 163, 74)
-                        }
-                        override fun mouseExited(e: MouseEvent) {
-                            background = Color(34, 197, 94)
-                        }
-                    })
-
-                    addActionListener {
-                        applyBackendChanges(filePathField.text, changeNoField.text)
-                    }
-                })
-            }
-        }
-
-        private fun applyBackendChanges(filePath: String, changeNo: String) {
-            if (filePath.isBlank() || changeNo.isBlank()) {
-                JOptionPane.showMessageDialog(
-                    toolWindowContent,
-                    "Lütfen dosya yolu ve change numarasını girin",
-                    "Eksik Bilgi",
-                    JOptionPane.WARNING_MESSAGE
-                )
-                return
-            }
-
-            try {
-                val file = java.io.File(filePath)
-                if (!file.exists()) {
-                    JOptionPane.showMessageDialog(
-                        toolWindowContent,
-                        "Dosya bulunamadı: $filePath",
-                        "Hata",
-                        JOptionPane.ERROR_MESSAGE
-                    )
-                    return
-                }
-
-                val cleanChangeNo = changeNo.replace(Regex("[^0-9]"), "")
-
-                if (cleanChangeNo.isEmpty()) {
-                    JOptionPane.showMessageDialog(
-                        toolWindowContent,
-                        "Lütfen geçerli bir change numarası girin (örn: 144252)",
-                        "Geçersiz Giriş",
-                        JOptionPane.WARNING_MESSAGE
-                    )
-                    return
-                }
-
-                val content = file.readText()
-                val updatedContent = content.replace(Regex("Dev-\\d+"), "Dev-$cleanChangeNo")
-
-                val changeNumber = cleanChangeNo.toIntOrNull()
-                val appTestReplacement = if (changeNumber != null && changeNumber % 2 == 0) {
-                    "apptest2"
-                } else {
-                    "apptest"
-                }
-
-                val finalContent = updatedContent.replace(Regex("https://apptest2?\\."), "https://$appTestReplacement.")
-
-                file.writeText(finalContent)
-
-                JOptionPane.showMessageDialog(
-                    toolWindowContent,
-                    "Backend konfigürasyonu başarıyla güncellendi!\n\n" +
-                            "Change No: Dev-$cleanChangeNo\n" +
-                            "App Environment: $appTestReplacement",
-                    "Başarılı",
-                    JOptionPane.INFORMATION_MESSAGE
-                )
-            } catch (e: Exception) {
-                JOptionPane.showMessageDialog(
-                    toolWindowContent,
-                    "Dosya güncellenirken hata oluştu: ${e.message}",
-                    "Hata",
-                    JOptionPane.ERROR_MESSAGE
-                )
+        private fun openBackendChanger() {
+            SwingUtilities.invokeLater {
+                val dialog = org.jetbrains.plugins.designer.ui.dialogs.ChangeBackendDialog(project)
+                dialog.show()
             }
         }
 

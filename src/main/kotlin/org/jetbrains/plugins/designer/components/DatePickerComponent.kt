@@ -9,7 +9,7 @@ import org.jetbrains.plugins.designer.models.Screen
 import javax.swing.ImageIcon
 
 object DatePickerComponent : ComponentDefinition {
-    override val type = "DATE_PICKER"
+    override val type = "DateInput"
     override val displayName = "Date Picker"
 
     override val propertyDescriptors = listOf(

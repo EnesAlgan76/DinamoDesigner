@@ -9,7 +9,7 @@ import org.jetbrains.plugins.designer.models.Screen
 import javax.swing.ImageIcon
 
 object PaymentToolComponent : ComponentDefinition {
-    override val type = "PAYMENT_TOOL"
+    override val type = "PaymentToolSelection"
     override val displayName = "Payment Tool"
 
     override val propertyDescriptors = listOf(
