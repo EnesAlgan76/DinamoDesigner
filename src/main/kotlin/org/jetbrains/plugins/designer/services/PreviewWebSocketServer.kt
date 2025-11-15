@@ -8,7 +8,7 @@ import org.jetbrains.plugins.designer.models.Screen
 import java.net.InetSocketAddress
 import kotlin.collections.set
 
-class PreviewWebSocketServer(port: Int = 8080) : WebSocketServer(InetSocketAddress(port)) {
+class PreviewWebSocketServer(host: String = "10.141.8.82", port: Int = 8887) : WebSocketServer(InetSocketAddress(host, port)) {
 
     private val gson = Gson()
 
@@ -64,9 +64,9 @@ class PreviewWebSocketServer(port: Int = 8080) : WebSocketServer(InetSocketAddre
     companion object {
         private var instance: PreviewWebSocketServer? = null
 
-        fun start(port: Int = 8080): PreviewWebSocketServer {
+        fun start(host: String = "10.141.8.82", port: Int = 8887): PreviewWebSocketServer {
             if (instance == null) {
-                instance = PreviewWebSocketServer(port)
+                instance = PreviewWebSocketServer(host, port)
                 instance?.start()
             }
             return instance!!

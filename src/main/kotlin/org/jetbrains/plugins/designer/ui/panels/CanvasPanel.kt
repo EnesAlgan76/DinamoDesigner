@@ -21,13 +21,54 @@ class CanvasPanel(
 ) : JPanel() {
 
     private var currentScreen: Screen? = null
+    private val mainContentPanel = JPanel().apply {
+        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        isOpaque = false
+    }
+    private val footerPanel = JPanel().apply {
+        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        isOpaque = false
+        border = JBUI.Borders.empty(20, 0, 0, 0)
+    }
 
     init {
-        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        layout = BorderLayout()
         isOpaque = false
         border = JBUI.Borders.empty(20)
 
+        val scrollPane = JScrollPane(mainContentPanel).apply {
+            isOpaque = false
+            viewport.isOpaque = false
+            border = JBUI.Borders.empty()
+        }
+
+        add(scrollPane, BorderLayout.CENTER)
+        add(createFooterContainer(), BorderLayout.SOUTH)
+
         setupDropTarget()
+    }
+
+    private fun createFooterContainer(): JPanel {
+        return JPanel(BorderLayout()).apply {
+            isOpaque = false
+            border = JBUI.Borders.empty(10, 0, 0, 0)
+
+            val separator = JSeparator().apply {
+                foreground = JBColor.border()
+            }
+            add(separator, BorderLayout.NORTH)
+
+            val footerTitlePanel = JPanel(FlowLayout(FlowLayout.LEFT)).apply {
+                isOpaque = false
+                add(JLabel("Footer Buttons").apply {
+                    font = Font("SF Pro Display", Font.BOLD, 12)
+                    foreground = JBColor(Color(100, 116, 139), Color(148, 163, 184))
+                })
+            }
+            add(footerTitlePanel, BorderLayout.NORTH)
+
+            add(footerPanel, BorderLayout.CENTER)
+        }
     }
 
     fun loadScreen(screen: Screen) {
@@ -37,16 +78,23 @@ class CanvasPanel(
 
     fun clearCanvas() {
         currentScreen?.components?.clear()
-        removeAll()
+        currentScreen?.footerComponents?.clear()
+        mainContentPanel.removeAll()
+        footerPanel.removeAll()
         revalidate()
         repaint()
     }
 
     fun refreshComponents() {
-        removeAll()
+        mainContentPanel.removeAll()
+        footerPanel.removeAll()
 
         currentScreen?.components?.forEach { component ->
-            add(createComponentPreview(component))
+            mainContentPanel.add(createComponentPreview(component, isFooter = false))
+        }
+
+        currentScreen?.footerComponents?.forEach { component ->
+            footerPanel.add(createComponentPreview(component, isFooter = true))
         }
 
         revalidate()
@@ -66,7 +114,7 @@ class CanvasPanel(
         onComponentAdded?.invoke(screen)
     }
 
-    private fun createComponentPreview(component: ComponentInstance): JPanel {
+    private fun createComponentPreview(component: ComponentInstance, isFooter: Boolean): JPanel {
         return JPanel(BorderLayout()).apply {
             isOpaque = false
             border = JBUI.Borders.empty()
@@ -105,7 +153,11 @@ class CanvasPanel(
 
                 addActionListener {
                     currentScreen?.let { screen ->
-                        componentManager.removeComponent(screen, component.id)
+                        if (isFooter) {
+                            screen.footerComponents.removeIf { it.id == component.id }
+                        } else {
+                            componentManager.removeComponent(screen, component.id)
+                        }
                         refreshComponents()
                         onComponentDeleted?.invoke(screen)
                     }
@@ -143,7 +195,8 @@ class CanvasPanel(
     }
 
     private fun setupDropTarget() {
-        DropTarget(this, object : DropTargetAdapter() {
+        // Main content drop target
+        DropTarget(mainContentPanel, object : DropTargetAdapter() {
             override fun drop(dtde: DropTargetDropEvent) {
                 try {
                     dtde.acceptDrop(DnDConstants.ACTION_COPY)
@@ -161,6 +214,52 @@ class CanvasPanel(
                 }
             }
         })
+
+        // Footer drop target
+        DropTarget(footerPanel, object : DropTargetAdapter() {
+            override fun drop(dtde: DropTargetDropEvent) {
+                try {
+                    dtde.acceptDrop(DnDConstants.ACTION_COPY)
+                    val transferable = dtde.transferable
+                    val definition = transferable.getTransferData(ComponentDataFlavor) as ComponentDefinition
+
+                    if (definition.type != "BUTTON") {
+                        dtde.dropComplete(false)
+                        return
+                    }
+
+                    addFooterComponentFromDefinition(definition)
+                    dtde.dropComplete(true)
+                } catch (e: Exception) {
+                    dtde.dropComplete(false)
+                }
+            }
+        })
+    }
+
+    fun addFooterComponentFromDefinition(definition: ComponentDefinition) {
+        val screen = currentScreen ?: return
+
+        // Use ComponentManager to create the component with proper counter management
+        val component = componentManager.createComponent(definition)
+
+        // Add to footer components instead of main components
+        screen.footerComponents.add(component)
+
+        refreshComponents()
+        onComponentAdded?.invoke(screen)
+    }
+
+    fun addFooterComponent(componentType: String, defaultProperties: Map<String, Any>) {
+        val screen = currentScreen ?: return
+        val newComponent = ComponentInstance(
+            id = componentManager.getNextComponentId(),
+            type = componentType,
+            properties = defaultProperties.toMutableMap()
+        )
+        screen.footerComponents.add(newComponent)
+        refreshComponents()
+        onComponentAdded?.invoke(screen)
     }
 
     override fun paintComponent(g: Graphics) {

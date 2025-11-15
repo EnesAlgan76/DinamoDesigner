@@ -9,11 +9,11 @@ class PreviewServerManager(private val project: Project) {
 
     private var server: PreviewWebSocketServer? = null
 
-    fun startServer(port: Int = 8080): Boolean {
+    fun startServer(host: String = "10.141.8.82", port: Int = 8887): Boolean {
         return try {
             if (server != null) return true
 
-            server = PreviewWebSocketServer.start(port)
+            server = PreviewWebSocketServer.start(host, port)
             true
         } catch (e: Exception) {
             e.printStackTrace()

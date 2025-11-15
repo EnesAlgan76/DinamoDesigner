@@ -56,9 +56,9 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
     }
 
     private fun startPreviewServer() {
-        val started = previewServerManager.startServer(8080)
+        val started = previewServerManager.startServer("10.141.8.82", 8887)
         if (started) {
-            println("✅ Preview server started successfully")
+            println("✅ Preview server started successfully on 10.141.8.82:8887")
             println(previewServerManager.getStatus())
         } else {
             println("❌ Failed to start preview server")

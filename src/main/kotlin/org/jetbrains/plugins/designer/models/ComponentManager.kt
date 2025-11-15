@@ -8,10 +8,12 @@ class ComponentManager {
     fun createComponent(componentDef: ComponentDefinition): ComponentInstance {
         componentCounter++
 
+        val defaultProps = componentDef.createDefaultProperties(componentCounter)
+
         val component = ComponentInstance(
             id = "component_$componentCounter",
             type = componentDef.type,
-            properties = mutableMapOf<String, Any>()
+            properties = defaultProps.toMutableMap()
         )
 
         return component
@@ -36,13 +38,18 @@ class ComponentManager {
     }
 
     fun updateComponentProperty(componentId: String, key: String, value: Any, screen: Screen): Boolean {
-        val component = screen.components.find { it.id == componentId } ?: return false
+        // First check in main components, then in footer components
+        val component = screen.components.find { it.id == componentId }
+            ?: screen.footerComponents.find { it.id == componentId }
+            ?: return false
+
         component.properties[key] = value
         return true
     }
 
     fun getComponent(screen: Screen, componentId: String): ComponentInstance? {
         return screen.components.find { it.id == componentId }
+            ?: screen.footerComponents.find { it.id == componentId }
     }
 
     fun getNextComponentId(): String {

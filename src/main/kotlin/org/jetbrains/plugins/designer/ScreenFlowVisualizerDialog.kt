@@ -44,16 +44,10 @@ class ScreenFlowVisualizerDialog(
         }
 
         screens.forEach { screen ->
-            if (screen.type == ScreenType.Form && screen.nextScreenId != null) {
-                val sourceCard = cards.find { it.screen.id == screen.id }
-                val targetCard = cards.find { it.screen.id == screen.nextScreenId }
+            // Check both main components and footer components for navigation
+            val allComponents = screen.components + screen.footerComponents
 
-                if (sourceCard != null && targetCard != null) {
-                    connections.add(Connection(sourceCard, targetCard, "Continue"))
-                }
-            }
-
-            screen.components.forEach { component ->
+            allComponents.forEach { component ->
                 val targetScreenId = component.properties["targetScreen"] as? String
                 if (!targetScreenId.isNullOrEmpty()) {
                     val sourceCard = cards.find { it.screen.id == screen.id }

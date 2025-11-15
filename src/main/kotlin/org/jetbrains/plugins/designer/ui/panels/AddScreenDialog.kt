@@ -13,33 +13,14 @@ class AddScreenDialog(private val existingScreens: List<Screen> = emptyList()) :
     private val typeComboBox = JComboBox(ScreenType.values())
     private val descriptionField = JTextField()
     private val isEntryScreenCheckBox = JCheckBox("Entry Screen", false)
-    private val nextScreenComboBox = JComboBox<String>()
 
     init {
         title = "Add New Screen"
-        updateNextScreenOptions()
 
-        typeComboBox.addActionListener {
-            updateNextScreenOptions()
-        }
 
         init()
     }
 
-    private fun updateNextScreenOptions() {
-        nextScreenComboBox.removeAllItems()
-        nextScreenComboBox.addItem("-- None --")
-
-        val selectedType = typeComboBox.selectedItem as? ScreenType
-
-        if (selectedType == ScreenType.Form) {
-            existingScreens.forEach { screen ->
-                nextScreenComboBox.addItem("${screen.name} (${screen.type})")
-            }
-        }
-
-        nextScreenComboBox.isEnabled = selectedType == ScreenType.Form
-    }
 
     override fun createCenterPanel(): JComponent {
         val panel = JPanel()
@@ -54,16 +35,6 @@ class AddScreenDialog(private val existingScreens: List<Screen> = emptyList()) :
         panel.add(JLabel("Screen Type:"))
         typeComboBox.preferredSize = Dimension(380, 30)
         panel.add(typeComboBox)
-        panel.add(Box.createVerticalStrut(10))
-
-        panel.add(JLabel("Description:"))
-        descriptionField.preferredSize = Dimension(380, 30)
-        panel.add(descriptionField)
-        panel.add(Box.createVerticalStrut(10))
-
-        panel.add(JLabel("Next Screen (Form Only):"))
-        nextScreenComboBox.preferredSize = Dimension(380, 30)
-        panel.add(nextScreenComboBox)
         panel.add(Box.createVerticalStrut(10))
 
         val checkBoxPanel = JPanel()
@@ -93,20 +64,13 @@ class AddScreenDialog(private val existingScreens: List<Screen> = emptyList()) :
             return null
         }
 
-        val nextScreenId = if (type == ScreenType.Form && nextScreenComboBox.selectedIndex > 0) {
-            val selectedIndex = nextScreenComboBox.selectedIndex - 1
-            existingScreens.getOrNull(selectedIndex)?.id
-        } else {
-            null
-        }
 
         return Screen(
             id = UUID.randomUUID().toString(),
             name = name,
             type = type,
             description = description.ifEmpty { name },
-            isEntryScreen = isEntryScreen,
-            nextScreenId = nextScreenId
+            isEntryScreen = isEntryScreen
         )
     }
 }

@@ -8,11 +8,29 @@ class ScreenManager {
         if (screens.any { it.id == screen.id }) {
             throw IllegalArgumentException("Screen with id ${screen.id} already exists")
         }
-        if (screens.isEmpty() && !screen.isEntryScreen) {
-            screens.add(screen.copy(isEntryScreen = true))
+
+        val screenToAdd = if (screens.isEmpty() && !screen.isEntryScreen) {
+            screen.copy(isEntryScreen = true)
         } else {
-            screens.add(screen)
+            screen
         }
+
+        // Add default continue button for Form screens
+        if (screenToAdd.type == ScreenType.Form && screenToAdd.footerComponents.isEmpty()) {
+            val continueButton = ComponentInstance(
+                id = "continue_button_${screenToAdd.id}",
+                type = "BUTTON",
+                properties = mutableMapOf(
+                    "identifier" to "continueButton",
+                    "text" to "Continue",
+                    "targetScreen" to "",
+                    "isContinueButton" to true
+                )
+            )
+            screenToAdd.footerComponents.add(continueButton)
+        }
+
+        screens.add(screenToAdd)
     }
 
     fun removeScreen(screenId: String): Boolean {

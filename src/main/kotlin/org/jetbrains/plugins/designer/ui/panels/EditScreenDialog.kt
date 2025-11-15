@@ -15,46 +15,17 @@ class EditScreenDialog(
     private val typeComboBox = JComboBox(ScreenType.values())
     private val descriptionField = JTextField(screen.description)
     private val isEntryScreenCheckBox = JCheckBox("Entry Screen", screen.isEntryScreen)
-    private val nextScreenComboBox = JComboBox<String>()
 
     init {
         title = "Edit Screen"
         typeComboBox.selectedItem = screen.type
-        updateNextScreenOptions()
-
-        screen.nextScreenId?.let { nextId ->
-            val index = existingScreens.indexOfFirst { it.id == nextId }
-            if (index >= 0) {
-                nextScreenComboBox.selectedIndex = index
-            }
-        }
-
-        typeComboBox.addActionListener {
-            updateNextScreenOptions()
-        }
-
         init()
-    }
-
-    private fun updateNextScreenOptions() {
-        nextScreenComboBox.removeAllItems()
-        nextScreenComboBox.addItem("-- None --")
-
-        val selectedType = typeComboBox.selectedItem as? ScreenType
-
-        if (selectedType == ScreenType.Form) {
-            existingScreens.filter { it.id != screen.id }.forEach { otherScreen ->
-                nextScreenComboBox.addItem("${otherScreen.name} (${otherScreen.type})")
-            }
-        }
-
-        nextScreenComboBox.isEnabled = selectedType == ScreenType.Form
     }
 
     override fun createCenterPanel(): JComponent {
         val panel = JPanel()
         panel.layout = BoxLayout(panel, BoxLayout.Y_AXIS)
-        panel.preferredSize = Dimension(400, 320)
+        panel.preferredSize = Dimension(400, 250)
 
         panel.add(JLabel("Screen Name:"))
         nameField.preferredSize = Dimension(380, 30)
@@ -69,11 +40,6 @@ class EditScreenDialog(
         panel.add(JLabel("Description:"))
         descriptionField.preferredSize = Dimension(380, 30)
         panel.add(descriptionField)
-        panel.add(Box.createVerticalStrut(10))
-
-        panel.add(JLabel("Next Screen (Form Only):"))
-        nextScreenComboBox.preferredSize = Dimension(380, 30)
-        panel.add(nextScreenComboBox)
         panel.add(Box.createVerticalStrut(10))
 
         val checkBoxPanel = JPanel()
@@ -103,19 +69,11 @@ class EditScreenDialog(
             return null
         }
 
-        val nextScreenId = if (type == ScreenType.Form && nextScreenComboBox.selectedIndex > 0) {
-            val selectedIndex = nextScreenComboBox.selectedIndex - 1
-            existingScreens.filter { it.id != screen.id }.getOrNull(selectedIndex)?.id
-        } else {
-            null
-        }
-
         return screen.copy(
             name = name,
             type = type,
             description = description.ifEmpty { name },
-            isEntryScreen = isEntryScreen,
-            nextScreenId = nextScreenId
+            isEntryScreen = isEntryScreen
         )
     }
 }

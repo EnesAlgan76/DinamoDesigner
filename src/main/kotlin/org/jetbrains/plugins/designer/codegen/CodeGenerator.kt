@@ -230,6 +230,14 @@ public class $className extends TFBaseFlow {
                 ScreenType.Form -> {
                     code.append("            properties.put(TFIdentifier.INPUTS, get${screen.name}Inputs(cachedUtil, service, messages));\n")
                     code.append("            ThemeUtil.configureFormProperties(getThemeValue(), properties, Util.getNavigationBarContinueButton());\n")
+
+                    // Add other footer buttons to FOOTERVIEWMODELS if any
+                    val otherFooterButtons = screen.footerComponents.filter {
+                        (it.properties["isContinueButton"] as? Boolean) != true
+                    }
+                    if (otherFooterButtons.isNotEmpty()) {
+                        code.append("            properties.put(TFIdentifier.FOOTERVIEWMODELS, get${screen.name}FooterButtons());\n")
+                    }
                 }
                 ScreenType.List -> {
                     code.append("            properties.put(TFIdentifier.DATASOURCE, get${screen.name}DataSource(service, messages));\n")
@@ -275,36 +283,59 @@ public class $className extends TFBaseFlow {
 
         var isFirst = true
 
-        screens.filter { it.type == ScreenType.Form && it.nextScreenId != null }.forEach { formScreen ->
-            val nextScreen = screens.find { it.id == formScreen.nextScreenId }
-            if (nextScreen != null) {
-                val condition = if (isFirst) "if" else "} else if"
-                isFirst = false
+        // Handle footer button navigations for all Form screens
+        screens.filter { it.type == ScreenType.Form }.forEach { formScreen ->
+            formScreen.footerComponents.filter { it.type == "BUTTON" }.forEach { button ->
+                val targetScreenId = button.properties["targetScreen"] as? String
+                val isContinueButton = button.properties["isContinueButton"] as? Boolean ?: false
 
-                val formIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, formScreen.name)
-                val nextIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, nextScreen.name)
+                if (!targetScreenId.isNullOrEmpty()) {
+                    val targetScreen = screens.find { it.id == targetScreenId }
+                    if (targetScreen != null) {
+                        val condition = if (isFirst) "if" else "} else if"
+                        isFirst = false
 
-                code.append("\n        $condition (request.getIdentifier().equals(TFScreenType.Form + $formIdentifier)) {\n")
-                code.append("            // Default continue button transition\n")
-                code.append("            validate${formScreen.name}(request);\n\n")
-                code.append("            identifier = $nextIdentifier;\n")
-                code.append("            screenType = TFScreenType.${nextScreen.type};\n")
+                        val formIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, formScreen.name)
+                        val targetIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, targetScreen.name)
+                        val buttonId = button.properties["identifier"] as? String ?: ""
+                        val buttonIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, buttonId)
 
-                when (nextScreen.type) {
-                    ScreenType.Form -> {
-                        code.append("            properties.put(TFIdentifier.TITLE, messages.getMessage(\"${nextScreen.name.lowercase()}_title\"));\n")
-                        code.append("            properties.put(TFIdentifier.INPUTS, get${nextScreen.name}Inputs(cachedUtil, service, messages));\n")
-                        code.append("            ThemeUtil.configureFormProperties(getThemeValue(), properties, Util.getNavigationBarContinueButton());\n")
-                    }
-                    ScreenType.Confirm -> {
-                        code.append("            properties = get${nextScreen.name}Properties(service, messages, request);\n")
-                        code.append("            ThemeUtil.configureFormProperties(getThemeValue(), properties, Util.getNavigationBarContinueButton());\n")
-                    }
-                    else -> {
-                        code.append("            properties = get${nextScreen.name}Properties(service, messages);\n")
+                        if (isContinueButton) {
+                            // Continue button uses form identifier directly
+                            code.append("\n        $condition (request.getIdentifier().equals(TFScreenType.Form + $formIdentifier)) {\n")
+                        } else {
+                            // Other buttons need button identifier check
+                            code.append("\n        $condition (request.getIdentifier().equals($formIdentifier) &&\n")
+                            code.append("                $buttonIdentifier.equals(request.getParameters().get(TFIdentifier.IDENTIFIER))) {\n")
+                        }
+
+                        code.append("            identifier = $targetIdentifier;\n")
+                        code.append("            screenType = TFScreenType.${targetScreen.type};\n")
+
+                        when (targetScreen.type) {
+                            ScreenType.Form -> {
+                                code.append("            properties.put(TFIdentifier.TITLE, messages.getMessage(\"${targetScreen.name.lowercase()}_title\"));\n")
+                                code.append("            properties.put(TFIdentifier.INPUTS, get${targetScreen.name}Inputs(cachedUtil, service, messages));\n")
+                                code.append("            ThemeUtil.configureFormProperties(getThemeValue(), properties, Util.getNavigationBarContinueButton());\n")
+
+                                val otherFooterButtons = targetScreen.footerComponents.filter {
+                                    (it.properties["isContinueButton"] as? Boolean) != true
+                                }
+                                if (otherFooterButtons.isNotEmpty()) {
+                                    code.append("            properties.put(TFIdentifier.FOOTERVIEWMODELS, get${targetScreen.name}FooterButtons());\n")
+                                }
+                            }
+                            ScreenType.Confirm -> {
+                                code.append("            properties = get${targetScreen.name}Properties(service, messages, request);\n")
+                                code.append("            ThemeUtil.configureFormProperties(getThemeValue(), properties, Util.getNavigationBarContinueButton());\n")
+                            }
+                            else -> {
+                                code.append("            properties = get${targetScreen.name}Properties(service, messages);\n")
+                            }
+                        }
+                        code.append("        ")
                     }
                 }
-                code.append("        ")
             }
         }
 
@@ -314,21 +345,6 @@ public class $className extends TFBaseFlow {
             val formScreen = flowScreens.find { it.type == ScreenType.Form }
             val confirmScreen = flowScreens.find { it.type == ScreenType.Confirm }
             val successScreen = flowScreens.find { it.type == ScreenType.Success }
-
-            if (formScreen != null && confirmScreen != null && formScreen.nextScreenId == null) {
-                val condition = if (isFirst) "if" else "} else if"
-                isFirst = false
-                val formIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, formScreen.name)
-                val confirmIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, confirmScreen.name)
-
-                code.append("\n        $condition (request.getIdentifier().equals(TFScreenType.Form + $formIdentifier)) {\n")
-                code.append("            validate${formScreen.name}(request);\n\n")
-                code.append("            identifier = $confirmIdentifier;\n")
-                code.append("            screenType = TFScreenType.Confirm;\n")
-                code.append("            properties = get${confirmScreen.name}Properties(service, messages, request);\n")
-                code.append("            ThemeUtil.configureFormProperties(getThemeValue(), properties, Util.getNavigationBarContinueButton());\n")
-                code.append("        ")
-            }
 
             // Confirm -> Success transition
             if (confirmScreen != null && successScreen != null) {
@@ -351,42 +367,6 @@ public class $className extends TFBaseFlow {
                 code.append("        ")
             }
 
-            formScreen?.components?.filter { it.type == "BUTTON" }?.forEach { button ->
-                val targetScreenId = button.properties["targetScreen"] as? String
-                if (!targetScreenId.isNullOrEmpty()) {
-                    val targetScreen = screens.find { it.id == targetScreenId }
-                    if (targetScreen != null) {
-                        if (isFirst) {
-                            code.append("\n        if")
-                            isFirst = false
-                        } else {
-                            code.append("} else if")
-                        }
-
-                        val formIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, formScreen.name)
-                        val targetIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, targetScreen.name)
-                        val buttonId = button.properties["identifier"] as? String ?: ""
-                        val buttonIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, buttonId)
-
-                        code.append(" (request.getIdentifier().equals($formIdentifier) &&\n")
-                        code.append("                $buttonIdentifier.equals(request.getParameters().get(TFIdentifier.IDENTIFIER))) {\n")
-                        code.append("            identifier = $targetIdentifier;\n")
-                        code.append("            screenType = TFScreenType.${targetScreen.type};\n")
-
-                        when (targetScreen.type) {
-                            ScreenType.Form -> {
-                                code.append("            properties.put(TFIdentifier.TITLE, messages.getMessage(\"${targetScreen.name.lowercase()}_title\"));\n")
-                                code.append("            properties.put(TFIdentifier.INPUTS, get${targetScreen.name}Inputs(cachedUtil, service, messages));\n")
-                                code.append("            ThemeUtil.configureFormProperties(getThemeValue(), properties, Util.getNavigationBarContinueButton());\n")
-                            }
-                            else -> {
-                                code.append("            properties = get${targetScreen.name}Properties(service, messages);\n")
-                            }
-                        }
-                        code.append("        ")
-                    }
-                }
-            }
         }
 
         code.append("""
@@ -428,6 +408,47 @@ public class $className extends TFBaseFlow {
     }
 
 """.trimIndent())
+
+        // Generate footer buttons method for non-continue buttons (FOOTERVIEWMODELS)
+        val otherFooterButtons = screen.footerComponents.filter {
+            (it.properties["isContinueButton"] as? Boolean) != true
+        }
+
+        if (otherFooterButtons.isNotEmpty()) {
+            code.append("""
+    private List<HashMap> get${screen.name}FooterButtons() {
+        List<HashMap> rowViewModelList = new ArrayList();
+
+""".trimIndent())
+
+            otherFooterButtons.forEach { button ->
+                val buttonText = button.properties["text"] as? String ?: "Button"
+                val buttonIdentifier = button.properties["identifier"] as? String ?: "button"
+                val buttonIdIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, buttonIdentifier)
+
+                // Create unique variable names based on button identifier
+                val sanitizedIdentifier = buttonIdentifier.replace(Regex("[^a-zA-Z0-9]"), "_")
+                val componentVarName = "componentButton${sanitizedIdentifier.capitalize()}"
+                val actionsVarName = "actions${sanitizedIdentifier.capitalize()}"
+                val submitActionVarName = "submitAction${sanitizedIdentifier.capitalize()}"
+
+                code.append("\n        TFComponentButton $componentVarName = new TFComponentButton($buttonIdIdentifier);\n")
+                code.append("        $componentVarName.setText(\"$buttonText\");\n\n")
+                code.append("        List<HashMap> $actionsVarName = new ArrayList<HashMap>();\n\n")
+                code.append("        HashMap $submitActionVarName = new HashMap();\n")
+                code.append("        $submitActionVarName.put(TFIdentifier.ACTION, TFIdentifier.SUBMIT);\n")
+                code.append("        $actionsVarName.add($submitActionVarName);\n\n")
+                code.append("        $componentVarName.setActions($actionsVarName);\n\n")
+                code.append("        rowViewModelList.add($componentVarName);\n")
+            }
+
+            code.append("""
+
+        return rowViewModelList;
+    }
+
+""".trimIndent())
+        }
 
         return code.toString()
     }
