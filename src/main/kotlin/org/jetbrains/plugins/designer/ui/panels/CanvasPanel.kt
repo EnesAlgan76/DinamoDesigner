@@ -8,10 +8,15 @@ import org.jetbrains.plugins.designer.models.Screen
 import org.jetbrains.plugins.template.designer.components.ComponentDefinition
 import org.jetbrains.plugins.template.designer.components.ComponentRegistry
 import java.awt.*
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.Transferable
 import java.awt.dnd.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.*
+
+// DataFlavor for ComponentInstance drag and drop
+private val ComponentInstanceFlavor = DataFlavor(ComponentInstance::class.java, "ComponentInstance")
 
 class CanvasPanel(
     private val componentManager: ComponentManager,
@@ -21,6 +26,7 @@ class CanvasPanel(
 ) : JPanel() {
 
     private var currentScreen: Screen? = null
+    private var selectedComponent: ComponentInstance? = null
     private val mainContentPanel = JPanel().apply {
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
         isOpaque = false
@@ -117,8 +123,21 @@ class CanvasPanel(
     private fun createComponentPreview(component: ComponentInstance, isFooter: Boolean): JPanel {
         return JPanel(BorderLayout()).apply {
             isOpaque = false
-            border = JBUI.Borders.empty()
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+
+            // Update border based on selection state
+            val isSelected = selectedComponent?.id == component.id
+            border = if (isSelected) {
+                JBUI.Borders.customLine(JBColor(Color(59, 130, 246), Color(96, 165, 250)), 2)
+            } else {
+                JBUI.Borders.empty()
+            }
+
+            // Background highlight for selected component
+            if (isSelected) {
+                isOpaque = true
+                background = JBColor(Color(59, 130, 246, 20), Color(96, 165, 250, 20))
+            }
 
             val definition = ComponentRegistry.getComponentByType(component.type)
             if (definition != null) {
@@ -173,14 +192,70 @@ class CanvasPanel(
 
             addMouseListener(object : MouseAdapter() {
                 override fun mouseClicked(e: MouseEvent) {
+                    selectedComponent = component
                     onComponentSelected(component)
+                    refreshComponents()
                 }
             })
+
+            // Drag and drop for reordering
+            setupComponentDragAndDrop(this, component, isFooter)
         }
     }
 
+    private fun setupComponentDragAndDrop(panel: JPanel, component: ComponentInstance, isFooter: Boolean) {
+        val dragSource = DragSource.getDefaultDragSource()
+
+        dragSource.createDefaultDragGestureRecognizer(panel, DnDConstants.ACTION_MOVE,
+            object : DragGestureListener {
+                override fun dragGestureRecognized(dge: DragGestureEvent) {
+                    val transferable = object : Transferable {
+                        override fun getTransferDataFlavors() = arrayOf(ComponentInstanceFlavor)
+                        override fun isDataFlavorSupported(flavor: DataFlavor?) = flavor == ComponentInstanceFlavor
+                        override fun getTransferData(flavor: DataFlavor?) = component
+                    }
+                    dge.startDrag(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR), transferable)
+                }
+            })
+
+        DropTarget(panel, object : DropTargetAdapter() {
+            override fun dragOver(dtde: DropTargetDragEvent) {
+                dtde.acceptDrag(DnDConstants.ACTION_MOVE)
+            }
+
+            override fun drop(dtde: DropTargetDropEvent) {
+                try {
+                    dtde.acceptDrop(DnDConstants.ACTION_MOVE)
+                    val transferable = dtde.transferable
+
+                    if (transferable.isDataFlavorSupported(ComponentInstanceFlavor)) {
+                        val draggedComponent = transferable.getTransferData(ComponentInstanceFlavor) as ComponentInstance
+                        val screen = currentScreen ?: return
+
+                        val list = if (isFooter) screen.footerComponents else screen.components
+                        val draggedIndex = list.indexOfFirst { it.id == draggedComponent.id }
+                        val targetIndex = list.indexOfFirst { it.id == component.id }
+
+                        if (draggedIndex != -1 && targetIndex != -1 && draggedIndex != targetIndex) {
+                            list.removeAt(draggedIndex)
+                            list.add(targetIndex, draggedComponent)
+                            refreshComponents()
+                            onComponentAdded?.invoke(screen)
+                        }
+
+                        dtde.dropComplete(true)
+                    } else {
+                        dtde.dropComplete(false)
+                    }
+                } catch (e: Exception) {
+                    dtde.dropComplete(false)
+                }
+            }
+        })
+    }
+
     private fun scaleIconForCanvas(icon: ImageIcon): ImageIcon {
-        val maxWidth = 500
+        val maxWidth = 350
         var width = icon.iconWidth
         var height = icon.iconHeight
 
