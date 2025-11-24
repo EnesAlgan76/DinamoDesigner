@@ -6,6 +6,7 @@ import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.designer.components.AmountFieldComponent
 import org.jetbrains.plugins.template.designer.components.CheckBoxComponent
 import org.jetbrains.plugins.template.designer.components.ComboBoxComponent
+import org.jetbrains.plugins.template.designer.components.PaymentToolComponent
 import org.jetbrains.plugins.template.designer.components.TextFieldComponent
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -22,8 +23,8 @@ class GeminiService(private val project: Project) {
     private val gson = Gson()
 
     companion object {
-        private const val GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
-        private const val API_KEY = "AIzaSyC4vF8rN_tW19_amk0273pWg3ewK2pY_hw"
+        private const val OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+        private const val API_KEY = "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"
     }
 
     fun generateScreenComponents(userPrompt: String, image: BufferedImage? = null): String? {
@@ -52,28 +53,40 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
         }
 
         try {
-            val parts = mutableListOf<Map<String, Any>>()
-            parts.add(mapOf("text" to fullPrompt))
+            val messages = mutableListOf<Map<String, Any>>()
 
             if (image != null) {
                 val base64Image = encodeImageToBase64(image)
-                parts.add(mapOf(
-                    "inline_data" to mapOf(
-                        "mime_type" to "image/jpeg",
-                        "data" to base64Image
+                messages.add(mapOf(
+                    "role" to "user",
+                    "content" to listOf(
+                        mapOf("type" to "text", "text" to fullPrompt),
+                        mapOf(
+                            "type" to "image_url",
+                            "image_url" to mapOf(
+                                "url" to "data:image/jpeg;base64,$base64Image"
+                            )
+                        )
                     )
+                ))
+            } else {
+                messages.add(mapOf(
+                    "role" to "user",
+                    "content" to fullPrompt
                 ))
             }
 
             val requestBody = mapOf(
-                "contents" to listOf(
-                    mapOf("parts" to parts)
-                )
+                "model" to "gpt-4o-mini",
+                "messages" to messages,
+                "max_tokens" to 4096,
+                "temperature" to 0.7
             )
 
             val request = HttpRequest.newBuilder()
-                .uri(URI.create("$GEMINI_API_URL?key=$API_KEY"))
+                .uri(URI.create(OPENAI_API_URL))
                 .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer $API_KEY")
                 .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(requestBody)))
                 .build()
 
@@ -119,23 +132,19 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
     private fun extractJsonFromResponse(responseBody: String): String? {
         try {
             val jsonResponse = JsonParser.parseString(responseBody).asJsonObject
-            val candidates = jsonResponse.getAsJsonArray("candidates")
+            val choices = jsonResponse.getAsJsonArray("choices")
 
-            if (candidates != null && candidates.size() > 0) {
-                val firstCandidate = candidates[0].asJsonObject
-                val content = firstCandidate.getAsJsonObject("content")
-                val parts = content.getAsJsonArray("parts")
+            if (choices != null && choices.size() > 0) {
+                val firstChoice = choices[0].asJsonObject
+                val message = firstChoice.getAsJsonObject("message")
+                val content = message.get("content").asString
 
-                if (parts != null && parts.size() > 0) {
-                    val text = parts[0].asJsonObject.get("text").asString
+                val cleanText = content
+                    .replace("```json", "")
+                    .replace("```", "")
+                    .trim()
 
-                    val cleanText = text
-                        .replace("```json", "")
-                        .replace("```", "")
-                        .trim()
-
-                    return cleanText
-                }
+                return cleanText
             }
 
             return null
@@ -241,9 +250,9 @@ AVAILABLE COMPONENTS:
    - targetScreen: string (screen ID for navigation, default: "")
 
 7. PAYMENT_TOOL - Payment method selector
-   Example: {"type": "PAYMENT_TOOL", "properties": {"identifier": "PAYMENT_METHOD", "title": "Ödeme Yöntemi"}}
+   Example: {"type": "${PaymentToolComponent.type}", "properties": {"identifier": "PAYMENT_METHOD", "title": "Ödeme Yöntemi"}}
    All Properties:
-   - identifier: string (default: "PAYMENTTOOL")
+   - identifier: string (default: "${PaymentToolComponent.type}")
    - title: string (default: "Select payment method")
    - paymentToolType: "Account"|"CreditCard"|"Both" (default: "Both")
    - required: boolean (default: true)
