@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonParser
 import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.designer.components.AmountFieldComponent
+import org.jetbrains.plugins.designer.config.ApiKeyConfig
 import org.jetbrains.plugins.template.designer.components.CheckBoxComponent
 import org.jetbrains.plugins.template.designer.components.ComboBoxComponent
 import org.jetbrains.plugins.template.designer.components.PaymentToolComponent
@@ -17,18 +18,16 @@ import java.net.http.HttpResponse
 import java.util.Base64
 import javax.imageio.ImageIO
 
-class GeminiService(private val project: Project) {
+class OpenAiService(private val project: Project) {
 
     private val httpClient = HttpClient.newBuilder().build()
     private val gson = Gson()
 
     companion object {
         private const val OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
-        private const val API_KEY = "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"
     }
 
     fun generateScreenComponents(userPrompt: String, image: BufferedImage? = null): String? {
-
         val systemPrompt = buildSystemPrompt(image != null)
         val fullPrompt = if (image != null) {
             """
@@ -77,7 +76,7 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
             }
 
             val requestBody = mapOf(
-                "model" to "gpt-4o-mini",
+                "model" to ApiKeyConfig.DEFAULT_MODEL,
                 "messages" to messages,
                 "max_tokens" to 4096,
                 "temperature" to 0.7
@@ -86,7 +85,7 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
             val request = HttpRequest.newBuilder()
                 .uri(URI.create(OPENAI_API_URL))
                 .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer $API_KEY")
+                .header("Authorization", "Bearer ${ApiKeyConfig.getApiKey()}")
                 .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(requestBody)))
                 .build()
 

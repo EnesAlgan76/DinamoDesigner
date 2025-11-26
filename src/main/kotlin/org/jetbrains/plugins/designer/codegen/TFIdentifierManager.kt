@@ -22,7 +22,9 @@ object TFIdentifierManager {
             return "TFIdentifier.$existingConstant"
         }
 
-        val constantName = identifierValue.uppercase()
+        val constantName = identifierValue
+            .replace(Regex("([a-z])([A-Z])"), "$1_$2")
+            .uppercase()
 
         addIdentifierToFile(project, constantName, identifierValue)
 

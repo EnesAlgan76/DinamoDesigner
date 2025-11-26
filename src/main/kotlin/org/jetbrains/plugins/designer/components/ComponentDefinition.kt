@@ -20,7 +20,10 @@ interface ComponentDefinition {
             val value = when (descriptor) {
                 is PropertyDescriptor.Text -> {
                     if (descriptor.key == "identifier") {
-                        "${descriptor.default}_$counter"
+                        // Capitalize first letter and append counter
+                        val baseIdentifier = descriptor.default
+                        val capitalized = baseIdentifier.toString().replaceFirstChar { it.uppercase() }
+                        "$capitalized$counter"
                     } else {
                         descriptor.default
                     }

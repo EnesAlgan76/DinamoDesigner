@@ -25,15 +25,16 @@ class AddScreenDialog(private val existingScreens: List<Screen> = emptyList()) :
     override fun createCenterPanel(): JComponent {
         val panel = JPanel()
         panel.layout = BoxLayout(panel, BoxLayout.Y_AXIS)
-        panel.preferredSize = Dimension(400, 320)
 
         panel.add(JLabel("Screen Name:"))
-        nameField.preferredSize = Dimension(380, 30)
+        nameField.preferredSize = Dimension(250, 30)
+        nameField.maximumSize = Dimension(Int.MAX_VALUE, 30)
         panel.add(nameField)
         panel.add(Box.createVerticalStrut(10))
 
         panel.add(JLabel("Screen Type:"))
-        typeComboBox.preferredSize = Dimension(380, 30)
+        typeComboBox.preferredSize = Dimension(250, 30)
+        typeComboBox.maximumSize = Dimension(Int.MAX_VALUE, 30)
         panel.add(typeComboBox)
         panel.add(Box.createVerticalStrut(10))
 
@@ -41,9 +42,9 @@ class AddScreenDialog(private val existingScreens: List<Screen> = emptyList()) :
         checkBoxPanel.layout = BoxLayout(checkBoxPanel, BoxLayout.X_AXIS)
         checkBoxPanel.add(isEntryScreenCheckBox)
         checkBoxPanel.add(Box.createHorizontalGlue())
+        checkBoxPanel.maximumSize = Dimension(Int.MAX_VALUE, 30)
 
         panel.add(checkBoxPanel)
-        panel.add(Box.createVerticalStrut(5))
 
         return panel
     }

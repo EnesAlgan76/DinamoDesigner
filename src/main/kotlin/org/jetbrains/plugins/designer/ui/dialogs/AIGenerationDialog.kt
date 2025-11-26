@@ -5,7 +5,7 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
-import org.jetbrains.plugins.designer.services.GeminiService
+import org.jetbrains.plugins.designer.services.OpenAiService
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
 import java.awt.dnd.*
@@ -276,8 +276,8 @@ class AIGenerationDialog(private val project: Project) : DialogWrapper(project) 
 
             object : SwingWorker<String?, Void>() {
                 override fun doInBackground(): String? {
-                    val geminiService = GeminiService(project)
-                    return geminiService.generateScreenComponents(prompt, selectedImage)
+                    val openAiService = OpenAiService(project)
+                    return openAiService.generateScreenComponents(prompt, selectedImage)
                 }
 
                 override fun done() {

@@ -166,9 +166,7 @@ class ServiceGeneratorDialog(private val project: Project) : DialogWrapper(proje
             val result = generator.generateService(
                 serviceName = serviceName,
                 requestJson = if (requestJson.isEmpty()) null else requestJson,
-                responseJson = responseJson,
-                returnType = null,
-                useGemini = false
+                responseJson = responseJson
             )
 
             statusLabel.text = "✅ Success! Generated ${result.filesCreated} files"

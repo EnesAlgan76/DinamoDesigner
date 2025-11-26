@@ -38,8 +38,20 @@ class PropertiesPanel(
         removeAll()
 
         val definition = ComponentRegistry.getComponentByType(component.type)
-        val titleLabel = StyledLabel(definition?.displayName ?: component.type, 14, Font.BOLD)
+        val identifier = component.properties["identifier"] as? String ?: component.id
+
+        // Main identifier title
+        val titleLabel = StyledLabel(identifier, 14, Font.BOLD).apply {
+            alignmentX = Component.CENTER_ALIGNMENT
+        }
         add(titleLabel)
+
+        // Small component type subtitle
+        val subtitleLabel = StyledLabel(definition?.displayName ?: component.type, 10, Font.PLAIN).apply {
+            foreground = JBColor(Color(100, 116, 139), Color(148, 163, 184))
+            alignmentX = Component.CENTER_ALIGNMENT
+        }
+        add(subtitleLabel)
         add(Box.createVerticalStrut(15))
 
         component.properties.forEach { (key, value) ->
