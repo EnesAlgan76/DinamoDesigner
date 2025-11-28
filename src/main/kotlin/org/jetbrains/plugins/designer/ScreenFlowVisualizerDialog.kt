@@ -5,10 +5,15 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.JBColor
 import org.jetbrains.plugins.designer.models.Screen
 import org.jetbrains.plugins.designer.models.ScreenType
+import org.jetbrains.plugins.template.designer.components.ComponentRegistry
 import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.event.MouseWheelEvent
+import java.awt.geom.AffineTransform
 import java.awt.geom.CubicCurve2D
+import java.awt.geom.Point2D
+import java.awt.image.BufferedImage
 import javax.swing.*
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -37,14 +42,13 @@ class ScreenFlowVisualizerDialog(
 
     private fun initializeCards() {
         screens.forEachIndexed { index, screen ->
-            val x = 150 + (index % 4) * 250
-            val y = 150 + (index / 4) * 200
+            val x = 100 + (index % 4) * 250
+            val y = 100 + (index / 4) * 400
             val card = ScreenCard(screen, x, y)
             cards.add(card)
         }
 
         screens.forEach { screen ->
-            // Check both main components and footer components for navigation
             val allComponents = screen.components + screen.footerComponents
 
             allComponents.forEach { component ->
@@ -70,6 +74,13 @@ class ScreenFlowVisualizerDialog(
         private var dragOffsetY = 0
         private var hoveredCard: ScreenCard? = null
 
+        private var zoomLevel = 1.0
+        private var panX = 0.0
+        private var panY = 0.0
+        private var isPanning = false
+        private var lastPanX = 0
+        private var lastPanY = 0
+
         init {
             background = JBColor(Color(240, 242, 247), Color(30, 31, 34))
             preferredSize = Dimension(1200, 700)
@@ -80,30 +91,55 @@ class ScreenFlowVisualizerDialog(
         private fun setupMouseListeners() {
             val mouseAdapter = object : MouseAdapter() {
                 override fun mousePressed(e: MouseEvent) {
-                    val card = findCardAt(e.x, e.y)
-                    if (card != null) {
+                    val transformedPoint = screenToWorld(e.x, e.y)
+                    val card = findCardAt(transformedPoint.x.toInt(), transformedPoint.y.toInt())
+
+                    if (e.isMetaDown || e.isControlDown || SwingUtilities.isMiddleMouseButton(e)) {
+                        isPanning = true
+                        lastPanX = e.x
+                        lastPanY = e.y
+                        cursor = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)
+                    } else if (card != null) {
                         draggedCard = card
-                        dragOffsetX = e.x - card.x
-                        dragOffsetY = e.y - card.y
+                        dragOffsetX = transformedPoint.x.toInt() - card.x
+                        dragOffsetY = transformedPoint.y.toInt() - card.y
+                        cursor = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)
+                    } else {
+                        isPanning = true
+                        lastPanX = e.x
+                        lastPanY = e.y
                         cursor = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)
                     }
                 }
 
                 override fun mouseReleased(e: MouseEvent) {
                     draggedCard = null
+                    isPanning = false
                     cursor = Cursor.getDefaultCursor()
                 }
 
                 override fun mouseDragged(e: MouseEvent) {
-                    draggedCard?.let { card ->
-                        card.x = (e.x - dragOffsetX).coerceIn(0, width - card.width)
-                        card.y = (e.y - dragOffsetY).coerceIn(0, height - card.height)
+                    if (isPanning) {
+                        val dx = e.x - lastPanX
+                        val dy = e.y - lastPanY
+                        panX += dx
+                        panY += dy
+                        lastPanX = e.x
+                        lastPanY = e.y
                         repaint()
+                    } else {
+                        draggedCard?.let { card ->
+                            val transformedPoint = screenToWorld(e.x, e.y)
+                            card.x = transformedPoint.x.toInt() - dragOffsetX
+                            card.y = transformedPoint.y.toInt() - dragOffsetY
+                            repaint()
+                        }
                     }
                 }
 
                 override fun mouseMoved(e: MouseEvent) {
-                    val newHovered = findCardAt(e.x, e.y)
+                    val transformedPoint = screenToWorld(e.x, e.y)
+                    val newHovered = findCardAt(transformedPoint.x.toInt(), transformedPoint.y.toInt())
                     if (newHovered != hoveredCard) {
                         hoveredCard = newHovered
                         cursor = if (newHovered != null) {
@@ -114,10 +150,37 @@ class ScreenFlowVisualizerDialog(
                         repaint()
                     }
                 }
+
+                override fun mouseWheelMoved(e: MouseWheelEvent) {
+                    val oldZoom = zoomLevel
+                    val zoomFactor = if (e.isMetaDown || e.isControlDown) 0.05 else 0.1
+
+                    if (e.wheelRotation < 0) {
+                        zoomLevel = (zoomLevel + zoomFactor).coerceIn(0.3, 3.0)
+                    } else {
+                        zoomLevel = (zoomLevel - zoomFactor).coerceIn(0.3, 3.0)
+                    }
+
+                    val mouseX = e.x.toDouble()
+                    val mouseY = e.y.toDouble()
+                    val zoomRatio = zoomLevel / oldZoom
+
+                    panX = mouseX - (mouseX - panX) * zoomRatio
+                    panY = mouseY - (mouseY - panY) * zoomRatio
+
+                    repaint()
+                }
             }
 
             addMouseListener(mouseAdapter)
             addMouseMotionListener(mouseAdapter)
+            addMouseWheelListener(mouseAdapter)
+        }
+
+        private fun screenToWorld(screenX: Int, screenY: Int): Point2D {
+            val worldX = (screenX - panX) / zoomLevel
+            val worldY = (screenY - panY) / zoomLevel
+            return Point2D.Double(worldX, worldY)
         }
 
         private fun findCardAt(x: Int, y: Int): ScreenCard? {
@@ -133,17 +196,28 @@ class ScreenFlowVisualizerDialog(
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
 
-            // Draw connections first (below cards)
+            val originalTransform = g2d.transform
+
+            val transform = AffineTransform()
+            transform.translate(panX, panY)
+            transform.scale(zoomLevel, zoomLevel)
+            g2d.transform(transform)
+
             connections.forEach { connection ->
                 drawConnection(g2d, connection)
             }
 
-            // Draw cards
             cards.forEach { card ->
                 val isHovered = card == hoveredCard
                 val isDragged = card == draggedCard
                 drawCard(g2d, card, isHovered, isDragged)
             }
+
+            g2d.transform = originalTransform
+
+            g2d.color = JBColor(Color(100, 100, 100, 180), Color(200, 200, 200, 180))
+            g2d.font = Font("SF Pro Display", Font.PLAIN, 11)
+            g2d.drawString("Zoom: ${(zoomLevel * 100).toInt()}%", 10, height - 10)
         }
 
         private fun drawConnection(g2d: Graphics2D, connection: Connection) {
@@ -271,6 +345,11 @@ class ScreenFlowVisualizerDialog(
             g2d.color = Color(0, 0, 0, if (isHovered || isDragged) 40 else 20)
             g2d.fillRoundRect(x + shadowOffset, y + shadowOffset, w, h, 15, 15)
 
+
+            g2d.color = JBColor(Color(255, 255, 255), Color(45, 45, 45))
+            g2d.fillRoundRect(x, y, w, h, 15, 15)
+
+            val headerHeight = 30
             val bgColor = when (card.screen.type) {
                 ScreenType.Form -> JBColor(Color(59, 130, 246), Color(59, 130, 246))
                 ScreenType.Confirm -> JBColor(Color(245, 158, 11), Color(245, 158, 11))
@@ -280,29 +359,80 @@ class ScreenFlowVisualizerDialog(
             }
 
             g2d.color = if (isHovered || isDragged) bgColor.brighter() else bgColor
-            g2d.fillRoundRect(x, y, w, h, 15, 15)
+            g2d.fillRoundRect(x, y, w, headerHeight, 15, 15)
+            g2d.fillRect(x, y + headerHeight - 15, w, 15)
 
-            g2d.color = Color(255, 255, 255, if (isHovered || isDragged) 150 else 80)
+
+            g2d.color = JBColor(Color(200, 200, 200), Color(60, 60, 60))
             g2d.stroke = BasicStroke(if (isHovered || isDragged) 3f else 2f)
             g2d.drawRoundRect(x, y, w - 1, h - 1, 15, 15)
 
             g2d.color = Color.WHITE
-            g2d.font = Font("SF Pro Display", Font.BOLD, 14)
-
+            g2d.font = Font("SF Pro Display", Font.BOLD, 10)
             val metrics = g2d.fontMetrics
             val nameWidth = metrics.stringWidth(card.screen.name)
-            g2d.drawString(card.screen.name, x + (w - nameWidth) / 2, y + 30)
+            g2d.drawString(card.screen.name, x + (w - nameWidth) / 2, y + 20)
 
-            g2d.font = Font("SF Pro Display", Font.PLAIN, 11)
-            g2d.color = Color(255, 255, 255, 180)
-            val typeText = card.screen.type.name
-            val typeWidth = metrics.stringWidth(typeText)
-            g2d.drawString(typeText, x + (w - typeWidth) / 2, y + 50)
+            drawComponents(g2d, card, x, y + headerHeight)
+        }
 
-            g2d.font = Font("SF Pro Display", Font.PLAIN, 10)
-            val componentCount = "${card.screen.components.size} components"
-            val countWidth = metrics.stringWidth(componentCount)
-            g2d.drawString(componentCount, x + (w - countWidth) / 2, y + h - 15)
+        private fun drawComponents(g2d: Graphics2D, card: ScreenCard, startX: Int, startY: Int) {
+            var currentY = startY + 5
+            val maxWidth = card.width - 20
+
+            card.screen.components.forEach { component ->
+                val definition = ComponentRegistry.getComponentByType(component.type)
+                if (definition != null) {
+                    try {
+                        val icon = definition.getDisplayIcon(null)
+                        val scaledIcon = scaleIconForCard(icon, maxWidth)
+
+                        val iconX = startX + (card.width - scaledIcon.iconWidth) / 2
+                        g2d.drawImage(scaledIcon.image, iconX, currentY, null)
+
+                        currentY += scaledIcon.iconHeight
+                    } catch (e: Exception) {
+                    }
+                }
+            }
+
+
+            if (card.screen.footerComponents.isNotEmpty()) {
+                g2d.color = JBColor(Color(200, 200, 200), Color(60, 60, 60))
+                g2d.stroke = BasicStroke(1f)
+                g2d.drawLine(startX + 10, currentY, startX + card.width - 10, currentY)
+                currentY += 5
+
+                card.screen.footerComponents.forEach { component ->
+                    val definition = ComponentRegistry.getComponentByType(component.type)
+                    if (definition != null) {
+                        try {
+                            val icon = definition.getDisplayIcon(null)
+                            val scaledIcon = scaleIconForCard(icon, maxWidth)
+
+                            val iconX = startX + (card.width - scaledIcon.iconWidth) / 2
+                            g2d.drawImage(scaledIcon.image, iconX, currentY, null)
+
+                            currentY += scaledIcon.iconHeight
+                        } catch (e: Exception) {
+                        }
+                    }
+                }
+            }
+        }
+
+        private fun scaleIconForCard(icon: ImageIcon, maxWidth: Int): ImageIcon {
+            var width = icon.iconWidth
+            var height = icon.iconHeight
+
+            if (width > maxWidth) {
+                val scale = maxWidth.toDouble() / width
+                width = maxWidth
+                height = (height * scale).toInt()
+            }
+
+            val scaledImage = icon.image.getScaledInstance(width, height, Image.SCALE_SMOOTH)
+            return ImageIcon(scaledImage)
         }
     }
 
@@ -314,8 +444,8 @@ class ScreenFlowVisualizerDialog(
         val screen: Screen,
         var x: Int,
         var y: Int,
-        val width: Int = 180,
-        val height: Int = 100
+        val width: Int = 200,
+        val height: Int = 350
     )
 
     data class Connection(

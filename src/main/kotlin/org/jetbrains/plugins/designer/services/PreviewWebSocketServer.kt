@@ -64,7 +64,7 @@ class PreviewWebSocketServer(host: String = "10.141.8.82", port: Int = 8887) : W
     companion object {
         private var instance: PreviewWebSocketServer? = null
 
-        fun start(host: String = "10.141.8.82", port: Int = 8887): PreviewWebSocketServer {
+        fun start(host: String = "10.0.2.2", port: Int = 8887): PreviewWebSocketServer {
             if (instance == null) {
                 instance = PreviewWebSocketServer(host, port)
                 instance?.start()

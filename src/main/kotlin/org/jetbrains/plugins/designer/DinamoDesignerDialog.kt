@@ -190,12 +190,12 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
                 isOpaque = false
                 layout = FlowLayout(FlowLayout.CENTER, 8, 0)
 
+                add(createModernIconButton("/icons/import.png", "Import", Color(59, 130, 246)) { importDesign() })
+                add(createModernIconButton("/icons/export.png", "Export", Color(168, 85, 247)) { exportDesign() })
                 add(createModernIconButton("/icons/ai.svg", "AI", Color(147, 51, 234)) { showAIGeneration() })
-                add(createModernIconButton("/icons/flow.svg", "Run", Color(34, 197, 94)) { runEmulator() })
-                add(createModernIconButton("/icons/flow.svg", "Flow", Color(59, 130, 246)) { showScreenFlow() })
-                add(createModernIconButton("/icons/setting.svg", "Settings", Color(100, 116, 139)) { showSettings() })
-                add(createModernIconButton("/icons/export.svg", "Export", Color(100, 116, 139)) { exportDesign() })
-                add(createModernIconButton("/icons/import.svg", "Import", Color(100, 116, 139)) { importDesign() })
+                add(createModernIconButton("/icons/flow.svg", "Flow", Color(6, 182, 212)) { showScreenFlow() })
+                add(createModernIconButton("/icons/runemulator.png", "Run", Color(34, 197, 94)) { runEmulator() })
+                add(createModernIconButton("/icons/setting.png", "Settings", Color(251, 146, 60)) { showSettings() })
                 add(createModernIconButton("/icons/clear.svg", "Clear", Color(239, 68, 68)) { clearCanvas() })
             }
             add(iconBar, BorderLayout.CENTER)
@@ -206,7 +206,7 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
         return JPanel().apply {
             layout = BorderLayout()
             isOpaque = false
-            preferredSize = Dimension(64, 60)
+            preferredSize = Dimension(64, 64)
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
 
             var isHovered = false
@@ -214,12 +214,12 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
             val iconButton = object : JLabel() {
                 init {
                     horizontalAlignment = SwingConstants.CENTER
-                    preferredSize = Dimension(64, 40)
+                    preferredSize = Dimension(64, 64)
 
                     try {
                         val loadedIcon = IconLoader.getIcon(iconPath, DinamoDesignerDialog::class.java)
                         if (loadedIcon != null) {
-                            val scaledIcon = com.intellij.util.IconUtil.scale(loadedIcon, null, 20f / loadedIcon.iconWidth)
+                            val scaledIcon = com.intellij.util.IconUtil.scale(loadedIcon, null, 22f / loadedIcon.iconWidth)
                             icon = scaledIcon
                         }
                     } catch (e: Exception) {
