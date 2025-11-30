@@ -15,7 +15,9 @@ object ButtonComponent : ComponentDefinition {
     override val propertyDescriptors = listOf(
         PropertyDescriptor.Text("identifier", ButtonComponent.type),
         PropertyDescriptor.Text("text", "Click Me"),
-        PropertyDescriptor.Text("buttonType", "PRIMARY"),
+        PropertyDescriptor.Enum("buttonType",  "ButtonTypePrimary", listOf("ButtonTypePrimary", "ButtonTypeSecondary", "ButtonTypeTertiary")),
+        PropertyDescriptor.Text("action", ""),
+        PropertyDescriptor.Boolean("disable", false),
         PropertyDescriptor.ScreenReference("targetScreen")
     )
 

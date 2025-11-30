@@ -5,6 +5,7 @@ import com.google.gson.JsonParser
 import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.designer.components.AmountFieldComponent
 import org.jetbrains.plugins.designer.config.ApiKeyConfig
+import org.jetbrains.plugins.template.designer.components.ButtonComponent
 import org.jetbrains.plugins.template.designer.components.CheckBoxComponent
 import org.jetbrains.plugins.template.designer.components.ComboBoxComponent
 import org.jetbrains.plugins.template.designer.components.PaymentToolComponent
@@ -251,12 +252,14 @@ AVAILABLE COMPONENTS:
    - informationString: string (default: "")
    - informationAlertTitle: string (default: "")
 
-6. BUTTON - Action button
-   Example: {"type": "Button", "properties": {"identifier": "continueBtn", "text": "Devam Et"}}
+6. ${ButtonComponent.type} - Action button
+   Example: {"type": "${ButtonComponent.type}", "properties": {"identifier": "button", "text": "Click Me", "buttonType": "ButtonTypePrimary", "action": "", "disable": false, "targetScreen": ""}}
    All Properties:
    - identifier: string (default: "button")
    - text: string (default: "Click Me")
-   - buttonType: string (default: "PRIMARY")
+   - buttonType: "ButtonTypePrimary"|"ButtonTypeSecondary"|"ButtonTypeTertiary" (default: "ButtonTypePrimary")
+   - action: string (action identifier, default: "")
+   - disable: boolean (default: false)
    - targetScreen: string (screen ID for navigation, default: "")
 
 7. PAYMENT_TOOL - Payment method selector
@@ -271,18 +274,22 @@ AVAILABLE COMPONENTS:
 
 RULES:
 - All identifiers should be in camelCase format (e.g., transferAmount, fromAccount, continueBtn)
-- Return ONLY a valid JSON object with "components" array
+- Return ONLY a valid JSON object with "components" and optional "footerComponents" arrays
 - Each component must have "type" and "properties"
 - Do NOT include any explanations, markdown formatting, or extra text
-- Always include at least one Button component
 - For forms, use appropriate field types based on data (amounts → AMOUNT_FIELD, accounts → COMBO_BOX, etc.)
 - Only include properties you actually need to set - omitted properties will automatically use their defaults
+- Footer components are typically used for action buttons at the bottom of the screen (Continue, Submit, etc.)
+- Regular components go in "components" array, footer buttons go in "footerComponents" array
 
 RESPONSE FORMAT:
 {
   "components": [
     {"type": "...", "properties": {...}},
     {"type": "...", "properties": {...}}
+  ],
+  "footerComponents": [
+  {"type": "...", "properties": {...}}
   ]
 }
         """.trimIndent()

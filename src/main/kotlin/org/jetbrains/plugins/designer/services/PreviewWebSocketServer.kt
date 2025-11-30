@@ -48,6 +48,11 @@ class PreviewWebSocketServer(host: String = "10.141.8.82", port: Int = 8887) : W
                             }
                         }
                     }
+                },
+                "footerViewModels" to screen.footerComponents.map { component ->
+                    component.properties.toMutableMap().apply {
+                        put("inputType", component.type)
+                    }
                 }
             )
         )

@@ -15,7 +15,6 @@ class ScreenManager {
             screen
         }
 
-        // Add default continue button for Form screens
         if (screenToAdd.type == ScreenType.Form && screenToAdd.footerComponents.isEmpty()) {
             val continueButton = ComponentInstance(
                 id = "continue_button_${screenToAdd.id}",
@@ -24,7 +23,11 @@ class ScreenManager {
                     "identifier" to "continueButton",
                     "text" to "Continue",
                     "targetScreen" to "",
-                    "isContinueButton" to true
+                    "isContinueButton" to true,
+                    "buttonType" to "ButtonTypePrimary",
+                    "action" to "",
+                    "disable" to false,
+                    "inputType" to "Button"
                 )
             )
             screenToAdd.footerComponents.add(continueButton)

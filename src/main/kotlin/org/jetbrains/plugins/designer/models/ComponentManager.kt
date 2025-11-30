@@ -32,6 +32,19 @@ class ComponentManager {
         return component
     }
 
+    fun addComponentToFooter(screen: Screen, componentType: String, defaultProps: Map<String, Any>): ComponentInstance {
+        componentCounter++
+
+        val component = ComponentInstance(
+            id = "component_$componentCounter",
+            type = componentType,
+            properties = defaultProps.toMutableMap()
+        )
+
+        screen.footerComponents.add(component)
+        return component
+    }
+
     fun removeComponent(screen: Screen, componentId: String): Boolean {
         val component = screen.components.find { it.id == componentId } ?: return false
         return screen.components.remove(component)
