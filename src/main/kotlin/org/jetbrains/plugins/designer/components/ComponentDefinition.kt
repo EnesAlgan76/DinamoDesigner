@@ -36,10 +36,7 @@ interface ComponentDefinition {
                 is PropertyDescriptor.Enum -> properties[descriptor.key] = descriptor.default
                 is PropertyDescriptor.ScreenReference -> properties[descriptor.key] = ""
                 is PropertyDescriptor.ConditionalGroup -> {
-                    // Add toggle key
                     properties[descriptor.toggleKey] = descriptor.default
-
-                    // Add all child properties with their defaults
                     descriptor.childProperties.forEach { childDesc ->
                         when (childDesc) {
                             is PropertyDescriptor.Text -> properties[childDesc.key] = childDesc.default

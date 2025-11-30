@@ -54,9 +54,18 @@ class PropertiesPanel(
         add(subtitleLabel)
         add(Box.createVerticalStrut(15))
 
-        component.properties.forEach { (key, value) ->
-            add(createPropertyField(key, value, component))
-            add(Box.createVerticalStrut(10))
+        definition?.propertyDescriptors?.forEach { descriptor ->
+            when (descriptor) {
+                is PropertyDescriptor.ConditionalGroup -> {
+                    add(createConditionalGroupField(descriptor, component))
+                    add(Box.createVerticalStrut(10))
+                }
+                else -> {
+                    val value = component.properties[descriptor.key] ?: descriptor.default
+                    add(createPropertyField(descriptor.key, value, component))
+                    add(Box.createVerticalStrut(10))
+                }
+            }
         }
 
         revalidate()
@@ -215,7 +224,6 @@ class PropertiesPanel(
             maximumSize = Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE)
             border = JBUI.Borders.empty(5)
 
-            // Child properties container (indented) - tanımla önce
             val childPanel = JPanel().apply {
                 layout = BoxLayout(this, BoxLayout.Y_AXIS)
                 isOpaque = false
@@ -229,22 +237,32 @@ class PropertiesPanel(
                 }
             }
 
-            // Toggle checkbox - childPanel'den sonra
-            val toggleCheckbox = JCheckBox(descriptor.k.uppercase(), toggleValue).apply {
-                font = Font("SF Pro Display", Font.BOLD, 11)
-                foreground = JBColor(Color(100, 116, 139), Color(148, 163, 184))
+            val headerPanel = JPanel(BorderLayout()).apply {
                 isOpaque = false
+                maximumSize = Dimension(Integer.MAX_VALUE, 70)
+                border = JBUI.Borders.empty(5)
 
-                addActionListener {
-                    onPropertyChanged(component, descriptor.toggleKey, isSelected)
-                    childPanel.isVisible = isSelected
-                    revalidate()
-                    repaint()
+                val label = JLabel(descriptor.k.uppercase()).apply {
+                    font = Font("SF Pro Display", Font.BOLD, 10)
+                    foreground = JBColor(Color(100, 116, 139), Color(148, 163, 184))
                 }
+                add(label, BorderLayout.NORTH)
+
+                val toggleCheckbox = JCheckBox("", toggleValue).apply {
+                    border = JBUI.Borders.customLine(JBColor.border(), 1)
+                    addActionListener {
+                        onPropertyChanged(component, descriptor.toggleKey, isSelected)
+                        childPanel.isVisible = isSelected
+                        revalidate()
+                        repaint()
+                    }
+                }
+                add(toggleCheckbox, BorderLayout.CENTER)
             }
 
-            add(toggleCheckbox)
-            add(Box.createVerticalStrut(5))
+
+
+            add(headerPanel)
             add(childPanel)
         }
     }
