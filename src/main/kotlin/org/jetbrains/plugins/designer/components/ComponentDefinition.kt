@@ -36,16 +36,19 @@ interface ComponentDefinition {
                 is PropertyDescriptor.Enum -> properties[descriptor.key] = descriptor.default
                 is PropertyDescriptor.ScreenReference -> properties[descriptor.key] = ""
                 is PropertyDescriptor.ConditionalGroup -> {
-                    properties[descriptor.toggleKey] = descriptor.default
-                    descriptor.childProperties.forEach { childDesc ->
-                        when (childDesc) {
-                            is PropertyDescriptor.Text -> properties[childDesc.key] = childDesc.default
-                            is PropertyDescriptor.Number -> properties[childDesc.key] = childDesc.default
-                            is PropertyDescriptor.Boolean -> properties[childDesc.key] = childDesc.default
-                            is PropertyDescriptor.Enum -> properties[childDesc.key] = childDesc.default
-                            is PropertyDescriptor.ScreenReference -> properties[childDesc.key] = ""
-                            else -> {}
+                    if (descriptor.d) {
+                        val childMap = mutableMapOf<String, Any>()
+                        descriptor.childProperties.forEach { childDesc ->
+                            when (childDesc) {
+                                is PropertyDescriptor.Text -> childMap[childDesc.key] = childDesc.default
+                                is PropertyDescriptor.Number -> childMap[childDesc.key] = childDesc.default
+                                is PropertyDescriptor.Boolean -> childMap[childDesc.key] = childDesc.default
+                                is PropertyDescriptor.Enum -> childMap[childDesc.key] = childDesc.default
+                                is PropertyDescriptor.ScreenReference -> childMap[childDesc.key] = ""
+                                else -> {}
+                            }
                         }
+                        properties[descriptor.key] = childMap
                     }
                 }
             }

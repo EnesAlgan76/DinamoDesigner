@@ -91,6 +91,8 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
 
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
+            println("response : ${response.body()}")
+
             if (response.statusCode() == 200) {
                 return extractJsonFromResponse(response.body())
             } else {
@@ -177,7 +179,8 @@ IMPORTANT: All properties are OPTIONAL except where noted. Only include properti
 AVAILABLE COMPONENTS:
 
 1. ${TextFieldComponent.type} - Text input field
-   Example: {"type": "${TextFieldComponent.type}", "properties": {"identifier": "RECEIVER_NAME", "title": "Alıcı Adı", "required": true}}
+   Example : {"type": "${TextFieldComponent.type}", "properties": {"identifier": "PHONE", "title": "Telefon", "rightButton": {"title": "Rehber", "identifier": "CONTACTS_BUTTON", "value": "contacts" , "dataSourceIdentifier": ""}}}}
+
    All Properties:
    - identifier: string (UPPERCASE_SNAKE_CASE, default: "TEXTFIELD")
    - title: string (default: "Enter text")
@@ -187,8 +190,13 @@ AVAILABLE COMPONENTS:
    - stringCaseType: "None"|"Upper"|"Lower" (default: "None")
    - keyboardType: "Default"|"NumberPad"|"DecimalPad"|"NumbersAndPunctuation"|"EmailAddress" (default: "Default")
    - predefinedText: string (default: "")
-   - rightButtonTitle: string (default: "")
-   - rightButtonValue: string (default: "")
+   - rightButton: object (OPTIONAL - nested object for right-side button functionality. Include ALL fields even if empty)
+     {
+       "title": string (button display text, required),
+       "identifier": string (button identifier in UPPERCASE_SNAKE_CASE, required),
+       "value": string (button action value, required),
+       "dataSourceIdentifier": string (default: "")
+     }
    - informationString: string (default: "")
    - informationAlertTitle: string (default: "")
    - highlightedError: boolean (default: false)

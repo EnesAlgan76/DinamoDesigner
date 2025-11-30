@@ -216,7 +216,8 @@ class PropertiesPanel(
         descriptor: PropertyDescriptor.ConditionalGroup,
         component: ComponentInstance
     ): JPanel {
-        val toggleValue = component.properties[descriptor.toggleKey] as? kotlin.Boolean ?: descriptor.d
+        val groupMap = component.properties[descriptor.key] as? Map<*, *>
+        val toggleValue = groupMap != null
 
         return JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -231,8 +232,8 @@ class PropertiesPanel(
                 isVisible = toggleValue
 
                 descriptor.childProperties.forEach { childDesc ->
-                    val childValue = component.properties[childDesc.key] ?: childDesc.default
-                    add(createPropertyField(childDesc.key, childValue, component))
+                    val childValue = groupMap?.get(childDesc.key) ?: childDesc.default
+                    add(createConditionalChildPropertyField(descriptor.key, childDesc.key, childValue, component))
                     add(Box.createVerticalStrut(8))
                 }
             }
@@ -251,19 +252,122 @@ class PropertiesPanel(
                 val toggleCheckbox = JCheckBox("", toggleValue).apply {
                     border = JBUI.Borders.customLine(JBColor.border(), 1)
                     addActionListener {
-                        onPropertyChanged(component, descriptor.toggleKey, isSelected)
-                        childPanel.isVisible = isSelected
-                        revalidate()
-                        repaint()
+                        if (isSelected) {
+                            val childMap = mutableMapOf<String, Any>()
+                            descriptor.childProperties.forEach { childDesc ->
+                                childMap[childDesc.key] = childDesc.default
+                            }
+                            component.properties[descriptor.key] = childMap
+                            onPropertyChanged(component, descriptor.key, childMap)
+                        } else {
+                            component.properties.remove(descriptor.key)
+                            onPropertyChanged(component, descriptor.key, "")
+                        }
+
+                        currentComponent?.let { comp ->
+                            currentScreen?.let { screen ->
+                                showComponentProperties(comp, screen)
+                            }
+                        }
                     }
                 }
                 add(toggleCheckbox, BorderLayout.CENTER)
             }
 
-
-
             add(headerPanel)
             add(childPanel)
+        }
+    }
+
+    private fun createConditionalChildPropertyField(groupKey: String, childKey: String, value: Any, component: ComponentInstance): JPanel {
+        val definition = ComponentRegistry.getComponentByType(component.type)
+        val groupDescriptor = definition?.propertyDescriptors?.filterIsInstance<PropertyDescriptor.ConditionalGroup>()?.find { it.key == groupKey }
+        val descriptor = groupDescriptor?.childProperties?.find { it.key == childKey }
+
+        return JPanel(BorderLayout()).apply {
+            isOpaque = false
+            maximumSize = Dimension(Integer.MAX_VALUE, 70)
+            border = JBUI.Borders.empty(5)
+
+            val label = JLabel(childKey.uppercase()).apply {
+                font = Font("SF Pro Display", Font.BOLD, 10)
+                foreground = JBColor(Color(100, 116, 139), Color(148, 163, 184))
+            }
+            add(label, BorderLayout.NORTH)
+
+            val inputField = when (descriptor) {
+                is PropertyDescriptor.Boolean -> createConditionalBooleanProperty(groupKey, childKey, value as kotlin.Boolean, component)
+                is PropertyDescriptor.Enum -> createConditionalEnumProperty(groupKey, childKey, value.toString(), component, descriptor.options)
+                is PropertyDescriptor.Number -> createConditionalNumberProperty(groupKey, childKey, value, component)
+                else -> createConditionalTextFieldProperty(groupKey, childKey, value.toString(), component)
+            }
+
+            add(inputField, BorderLayout.CENTER)
+        }
+    }
+
+    private fun updateConditionalGroupProperty(component: ComponentInstance, groupKey: String, propertyKey: String, value: Any) {
+        val groupMap = component.properties[groupKey] as? MutableMap<String, Any> ?: mutableMapOf()
+        groupMap[propertyKey] = value
+        component.properties[groupKey] = groupMap
+        onPropertyChanged(component, groupKey, groupMap)
+    }
+
+    private fun createConditionalTextFieldProperty(groupKey: String, childKey: String, value: String, component: ComponentInstance): JTextField {
+        return JTextField(value).apply {
+            border = JBUI.Borders.customLine(JBColor.border(), 1)
+            addActionListener {
+                updateConditionalGroupProperty(component, groupKey, childKey, text)
+            }
+            addFocusListener(object : FocusAdapter() {
+                override fun focusLost(e: FocusEvent?) {
+                    updateConditionalGroupProperty(component, groupKey, childKey, text)
+                }
+            })
+        }
+    }
+
+    private fun createConditionalBooleanProperty(groupKey: String, childKey: String, value: Boolean, component: ComponentInstance): JCheckBox {
+        return JCheckBox("", value).apply {
+            addActionListener {
+                updateConditionalGroupProperty(component, groupKey, childKey, isSelected)
+            }
+        }
+    }
+
+    private fun createConditionalNumberProperty(groupKey: String, childKey: String, value: Any, component: ComponentInstance): JTextField {
+        val numValue = when (value) {
+            is Number -> value.toString()
+            is String -> value
+            else -> "0"
+        }
+
+        return JTextField(numValue).apply {
+            border = JBUI.Borders.customLine(JBColor.border(), 1)
+            addActionListener {
+                val intValue = text.toIntOrNull() ?: 0
+                updateConditionalGroupProperty(component, groupKey, childKey, intValue)
+            }
+            addFocusListener(object : FocusAdapter() {
+                override fun focusLost(e: FocusEvent?) {
+                    val intValue = text.toIntOrNull() ?: 0
+                    updateConditionalGroupProperty(component, groupKey, childKey, intValue)
+                }
+            })
+        }
+    }
+
+    private fun createConditionalEnumProperty(groupKey: String, childKey: String, value: String, component: ComponentInstance, options: List<String>): JComboBox<String> {
+        return JComboBox<String>().apply {
+            options.forEach { addItem(it) }
+            selectedItem = value
+
+            addActionListener {
+                val selected = selectedItem as? String
+                if (selected != null) {
+                    updateConditionalGroupProperty(component, groupKey, childKey, selected)
+                }
+            }
         }
     }
 }

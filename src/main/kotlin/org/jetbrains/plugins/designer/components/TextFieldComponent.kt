@@ -6,6 +6,7 @@ import org.jetbrains.plugins.designer.codegen.TFMessagesManager
 import org.jetbrains.plugins.designer.components.PropertyDescriptor
 import org.jetbrains.plugins.designer.models.ComponentInstance
 import org.jetbrains.plugins.designer.models.Screen
+import java.awt.Image
 import javax.swing.ImageIcon
 import kotlin.collections.set
 
@@ -23,14 +24,14 @@ object TextFieldComponent : ComponentDefinition {
         PropertyDescriptor.Enum("keyboardType", "Default", listOf("Default", "NumberPad", "DecimalPad", "NumbersAndPunctuation", "EmailAddress")),
         PropertyDescriptor.Text("predefinedText", ""),
         PropertyDescriptor.ConditionalGroup(
-            k = "Right Button",
-            toggleKey = "hasRightButton",
+            k = "rightButton",
             d = false,
             childProperties = listOf(
-                PropertyDescriptor.Text("rightButtonTitle", ""),
-                PropertyDescriptor.Text("rightButtonValue", ""),
-                PropertyDescriptor.Text("rightButtonDataSourceIdentifier", "")
-            )
+                PropertyDescriptor.Text("title", ""),
+                PropertyDescriptor.Text("identifier", ""),
+                PropertyDescriptor.Text("value", ""),
+                PropertyDescriptor.Text("dataSourceIdentifier", "")
+            ),
         ),
         PropertyDescriptor.Text("informationString", ""),
         PropertyDescriptor.Text("informationAlertTitle", ""),
@@ -45,7 +46,7 @@ object TextFieldComponent : ComponentDefinition {
 
             if (size != null) {
                 val originalIcon = ImageIcon(resource)
-                val scaledImage = originalIcon.image.getScaledInstance(size, size, java.awt.Image.SCALE_SMOOTH)
+                val scaledImage = originalIcon.image.getScaledInstance(size, size, Image.SCALE_SMOOTH)
                 ImageIcon(scaledImage)
             } else {
                 ImageIcon(resource)
@@ -67,10 +68,13 @@ object TextFieldComponent : ComponentDefinition {
         val stringCaseType = props["stringCaseType"] as? String ?: "None"
         val keyboardType = props["keyboardType"] as? String ?: "Default"
         val predefinedText = props["predefinedText"] as? String ?: ""
-        val hasRightButton = props["hasRightButton"] as? Boolean ?: false
-        val rightButtonTitle = props["rightButtonTitle"] as? String ?: ""
-        val rightButtonValue = props["rightButtonValue"] as? String ?: ""
-        val rightButtonDataSourceIdentifier = props["rightButtonDataSourceIdentifier"] as? String ?: ""
+
+        val rightButtonMap = props["rightButton"] as? Map<*, *>
+        val rightButtonTitle = rightButtonMap?.get("title") as? String ?: ""
+        val rightButtonIdentifier = rightButtonMap?.get("identifier") as? String ?: ""
+        val rightButtonValue = rightButtonMap?.get("value") as? String ?: ""
+        val rightButtonDataSourceIdentifier = rightButtonMap?.get("dataSourceIdentifier") as? String ?: ""
+
         val informationString = props["informationString"] as? String ?: ""
         val informationAlertTitle = props["informationAlertTitle"] as? String ?: ""
         val highlightedError = props["highlightedError"] as? Boolean ?: false
@@ -98,13 +102,25 @@ object TextFieldComponent : ComponentDefinition {
                 appendLine("        $varName.setKeyboardType(TFKeyboardType.$keyboardType.name());")
             }
 
-            if (hasRightButton && rightButtonTitle.isNotEmpty() && rightButtonValue.isNotEmpty()) {
+            if (rightButtonMap != null && rightButtonTitle.isNotEmpty()) {
+                appendLine("        TFRightButtonModel rightButtonModel = new TFRightButtonModel();")
                 val titleMsg = TFMessagesManager.getOrCreateMessage(project, rightButtonTitle)
-                if (rightButtonDataSourceIdentifier.isNotEmpty()) {
-                    appendLine("        $varName.setRightButtonTitleDataSourceIdentifier($titleMsg, \"$rightButtonDataSourceIdentifier\");")
-                } else {
-                    appendLine("        $varName.setRightButtonTitleValue($titleMsg, \"$rightButtonValue\");")
+                appendLine("        rightButtonModel.setTitle($titleMsg);")
+
+                if (rightButtonIdentifier.isNotEmpty()) {
+                    val buttonIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, rightButtonIdentifier)
+                    appendLine("        rightButtonModel.setIdentifier($buttonIdentifier);")
                 }
+
+                if (rightButtonValue.isNotEmpty()) {
+                    appendLine("        rightButtonModel.setValue(\"$rightButtonValue\");")
+                }
+
+                if (rightButtonDataSourceIdentifier.isNotEmpty()) {
+                    appendLine("        rightButtonModel.setDataSourceIdentifier(\"$rightButtonDataSourceIdentifier\");")
+                }
+
+                appendLine("        $varName.setRightButton(rightButtonModel);")
             }
 
             if (required) {

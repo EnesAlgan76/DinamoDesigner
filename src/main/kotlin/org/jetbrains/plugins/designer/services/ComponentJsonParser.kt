@@ -49,6 +49,25 @@ object ComponentJsonParser {
                                 else -> primitive.asString
                             }
                         }
+                        value.isJsonObject -> {
+                            val nestedMap = mutableMapOf<String, Any>()
+                            value.asJsonObject.keySet().forEach { nestedKey ->
+                                val nestedValue = value.asJsonObject.get(nestedKey)
+                                nestedMap[nestedKey] = when {
+                                    nestedValue.isJsonPrimitive -> {
+                                        val primitive = nestedValue.asJsonPrimitive
+                                        when {
+                                            primitive.isBoolean -> primitive.asBoolean
+                                            primitive.isNumber -> primitive.asInt
+                                            primitive.isString -> primitive.asString
+                                            else -> primitive.asString
+                                        }
+                                    }
+                                    else -> nestedValue.toString()
+                                }
+                            }
+                            nestedMap
+                        }
                         else -> value.toString()
                     }
                     properties[key] = actualValue
