@@ -16,10 +16,12 @@ interface ComponentDefinition {
     fun validateProperties(properties: Map<String, Any>): Boolean
 
     fun createDefaultProperties(counter: Int): Map<String, Any> {
-        return propertyDescriptors.associate { descriptor ->
-            val value = when (descriptor) {
+        val properties = mutableMapOf<String, Any>()
+
+        propertyDescriptors.forEach { descriptor ->
+            when (descriptor) {
                 is PropertyDescriptor.Text -> {
-                    if (descriptor.key == "identifier") {
+                    val value = if (descriptor.key == "identifier") {
                         // Capitalize first letter and append counter
                         val baseIdentifier = descriptor.default
                         val capitalized = baseIdentifier.toString().replaceFirstChar { it.uppercase() }
@@ -27,13 +29,31 @@ interface ComponentDefinition {
                     } else {
                         descriptor.default
                     }
+                    properties[descriptor.key] = value
                 }
-                is PropertyDescriptor.Number -> descriptor.default
-                is PropertyDescriptor.Boolean -> descriptor.default
-                is PropertyDescriptor.Enum -> descriptor.default
-                is PropertyDescriptor.ScreenReference -> ""
+                is PropertyDescriptor.Number -> properties[descriptor.key] = descriptor.default
+                is PropertyDescriptor.Boolean -> properties[descriptor.key] = descriptor.default
+                is PropertyDescriptor.Enum -> properties[descriptor.key] = descriptor.default
+                is PropertyDescriptor.ScreenReference -> properties[descriptor.key] = ""
+                is PropertyDescriptor.ConditionalGroup -> {
+                    // Add toggle key
+                    properties[descriptor.toggleKey] = descriptor.default
+
+                    // Add all child properties with their defaults
+                    descriptor.childProperties.forEach { childDesc ->
+                        when (childDesc) {
+                            is PropertyDescriptor.Text -> properties[childDesc.key] = childDesc.default
+                            is PropertyDescriptor.Number -> properties[childDesc.key] = childDesc.default
+                            is PropertyDescriptor.Boolean -> properties[childDesc.key] = childDesc.default
+                            is PropertyDescriptor.Enum -> properties[childDesc.key] = childDesc.default
+                            is PropertyDescriptor.ScreenReference -> properties[childDesc.key] = ""
+                            else -> {}
+                        }
+                    }
+                }
             }
-            descriptor.key to value
         }
+
+        return properties
     }
 }

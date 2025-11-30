@@ -8,7 +8,7 @@ import org.jetbrains.plugins.designer.models.Screen
 import java.net.InetSocketAddress
 import kotlin.collections.set
 
-class PreviewWebSocketServer(host: String = "10.141.8.82", port: Int = 8887) : WebSocketServer(InetSocketAddress(host, port)) {
+class PreviewWebSocketServer(host: String = "10.141.8.82", port: Int = 8887) : WebSocketServer(InetSocketAddress(port)) {
 
     private val gson = Gson()
 

@@ -99,6 +99,9 @@ class PropertiesPanel(
             add(label, BorderLayout.NORTH)
 
             val inputField = when (descriptor) {
+                is PropertyDescriptor.ConditionalGroup -> {
+                    return createConditionalGroupField(descriptor, component)
+                }
                 is PropertyDescriptor.Boolean -> createBooleanProperty(key, value as kotlin.Boolean, component)
                 is PropertyDescriptor.Enum -> createEnumProperty(key, value.toString(), component, descriptor.options)
                 is PropertyDescriptor.ScreenReference -> createScreenSelectionProperty(key, value.toString(), component, currentScreen?.let { listOf(it) } ?: emptyList())
@@ -197,6 +200,52 @@ class PropertiesPanel(
                 val targetScreen = allScreens.find { "${it.name} (${it.type})" == selected }
                 onPropertyChanged(component, key, targetScreen?.id ?: "")
             }
+        }
+    }
+
+    private fun createConditionalGroupField(
+        descriptor: PropertyDescriptor.ConditionalGroup,
+        component: ComponentInstance
+    ): JPanel {
+        val toggleValue = component.properties[descriptor.toggleKey] as? kotlin.Boolean ?: descriptor.d
+
+        return JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            isOpaque = false
+            maximumSize = Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE)
+            border = JBUI.Borders.empty(5)
+
+            // Child properties container (indented) - tanımla önce
+            val childPanel = JPanel().apply {
+                layout = BoxLayout(this, BoxLayout.Y_AXIS)
+                isOpaque = false
+                border = JBUI.Borders.emptyLeft(20)
+                isVisible = toggleValue
+
+                descriptor.childProperties.forEach { childDesc ->
+                    val childValue = component.properties[childDesc.key] ?: childDesc.default
+                    add(createPropertyField(childDesc.key, childValue, component))
+                    add(Box.createVerticalStrut(8))
+                }
+            }
+
+            // Toggle checkbox - childPanel'den sonra
+            val toggleCheckbox = JCheckBox(descriptor.k.uppercase(), toggleValue).apply {
+                font = Font("SF Pro Display", Font.BOLD, 11)
+                foreground = JBColor(Color(100, 116, 139), Color(148, 163, 184))
+                isOpaque = false
+
+                addActionListener {
+                    onPropertyChanged(component, descriptor.toggleKey, isSelected)
+                    childPanel.isVisible = isSelected
+                    revalidate()
+                    repaint()
+                }
+            }
+
+            add(toggleCheckbox)
+            add(Box.createVerticalStrut(5))
+            add(childPanel)
         }
     }
 }

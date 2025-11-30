@@ -310,7 +310,7 @@ class DinamoDesignerDialog(private val project: Project) : JFrame("EA") {
     private fun initializeDefaultScreen() {
         val defaultScreen = Screen(
             id = "screen_${System.currentTimeMillis()}",
-            name = "MAIN_FORM",
+            name = "MainScreen",
             type = ScreenType.Form,
             description = "Main form screen",
             isEntryScreen = true

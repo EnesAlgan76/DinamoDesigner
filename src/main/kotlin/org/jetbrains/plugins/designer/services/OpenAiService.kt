@@ -181,14 +181,17 @@ AVAILABLE COMPONENTS:
    All Properties:
    - identifier: string (UPPERCASE_SNAKE_CASE, default: "TEXTFIELD")
    - title: string (default: "Enter text")
-   - maxLength: number (default: 100)
+   - maxLength: number (default: 200)
    - required: boolean (default: false)
-   - placeholder: string (default: "")
-   - textType: "AlphaNumeric"|"OnlyNumber"|"OnlyAlpha"|"Email" (default: "AlphaNumeric")
-   - keyboardType: "Default"|"NumberPad"|"EmailAddress"|"PhonePad"|"URL"|"DecimalPad" (default: "Default")
+   - textType: "None"|"OnlyNumber"|"OnlyNumeric"|"AlphaNumeric"|"AlphaNumericWithTurkishCharacter"|"Alphabet"|"TaxSerialNumber"|"AlphaNumericWithBrackets" (default: "AlphaNumeric")
+   - stringCaseType: "None"|"Upper"|"Lower" (default: "None")
+   - keyboardType: "Default"|"NumberPad"|"DecimalPad"|"NumbersAndPunctuation"|"EmailAddress" (default: "Default")
    - predefinedText: string (default: "")
+   - rightButtonTitle: string (default: "")
+   - rightButtonValue: string (default: "")
    - informationString: string (default: "")
-   - informationTitle: string (default: "")
+   - informationAlertTitle: string (default: "")
+   - highlightedError: boolean (default: false)
    - disable: boolean (default: false)
 
 2. ${AmountFieldComponent.type} - Currency amount input
