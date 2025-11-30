@@ -231,7 +231,6 @@ public class $className extends TFBaseFlow {
                     code.append("            properties.put(TFIdentifier.INPUTS, get${screen.name}Inputs(cachedUtil, service, messages));\n")
                     code.append("            ThemeUtil.configureFormProperties(getThemeValue(), properties, Util.getNavigationBarContinueButton());\n")
 
-                    // Add other footer buttons to FOOTERVIEWMODELS if any
                     val otherFooterButtons = screen.footerComponents.filter {
                         (it.properties["isContinueButton"] as? Boolean) != true
                     }
@@ -285,7 +284,7 @@ public class $className extends TFBaseFlow {
 
         // Handle footer button navigations for all Form screens
         screens.filter { it.type == ScreenType.Form }.forEach { formScreen ->
-            formScreen.footerComponents.filter { it.type == "BUTTON" }.forEach { button ->
+            formScreen.footerComponents.filter { it.type == "Button" }.forEach { button ->
                 val targetScreenId = button.properties["targetScreen"] as? String
                 val isContinueButton = button.properties["isContinueButton"] as? Boolean ?: false
 

@@ -298,7 +298,7 @@ class CanvasPanel(
                     val transferable = dtde.transferable
                     val definition = transferable.getTransferData(ComponentDataFlavor) as ComponentDefinition
 
-                    if (definition.type != "BUTTON") {
+                    if (definition.type != "Button") {
                         dtde.dropComplete(false)
                         return
                     }

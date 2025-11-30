@@ -15,7 +15,7 @@ object TextFieldComponent : ComponentDefinition {
     override val displayName = "Text Field"
 
     override val propertyDescriptors = listOf(
-        PropertyDescriptor.Text("identifier", "TEXTFIELD"),
+        PropertyDescriptor.Text("identifier", TextFieldComponent.type),
         PropertyDescriptor.Text("title", "Enter text"),
         PropertyDescriptor.Number("maxLength", 200),
         PropertyDescriptor.Boolean("required", false),
@@ -58,7 +58,7 @@ object TextFieldComponent : ComponentDefinition {
 
     override fun generateCode(project: Project, component: ComponentInstance, allScreens: List<Screen>): String {
         val props = component.properties
-        val identifierValue = props["identifier"] as? String ?: "TEXTFIELD"
+        val identifierValue = props["identifier"] as? String ?: TextFieldComponent.type
         val identifier = TFIdentifierManager.getOrCreateIdentifier(project, identifierValue)
         val varName = identifierValue.lowercase().replace("_", "")
         val title = props["title"] as? String ?: "Enter text"

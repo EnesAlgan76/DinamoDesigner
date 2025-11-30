@@ -19,7 +19,7 @@ class ScreenManager {
         if (screenToAdd.type == ScreenType.Form && screenToAdd.footerComponents.isEmpty()) {
             val continueButton = ComponentInstance(
                 id = "continue_button_${screenToAdd.id}",
-                type = "BUTTON",
+                type = "Button",
                 properties = mutableMapOf(
                     "identifier" to "continueButton",
                     "text" to "Continue",

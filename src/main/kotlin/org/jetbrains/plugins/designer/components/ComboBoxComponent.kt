@@ -13,7 +13,7 @@ object ComboBoxComponent : ComponentDefinition {
     override val displayName = "ComboBox"
 
     override val propertyDescriptors = listOf(
-        PropertyDescriptor.Text("identifier", "COMBOBOX"),
+        PropertyDescriptor.Text("identifier", ComboBoxComponent.type),
         PropertyDescriptor.Text("title", "Select option"),
         PropertyDescriptor.Text("items", "Option 1,Option 2,Option 3"),
         PropertyDescriptor.Number("selectedIndex", 0),
@@ -44,7 +44,7 @@ object ComboBoxComponent : ComponentDefinition {
 
     override fun generateCode(project: Project, component: ComponentInstance, allScreens: List<Screen>): String {
         val props = component.properties
-        val identifierValue = props["identifier"] as? String ?: "COMBOBOX"
+        val identifierValue = props["identifier"] as? String ?: ComboBoxComponent.type
         val identifier = TFIdentifierManager.getOrCreateIdentifier(project, identifierValue)
         val varName = identifierValue.lowercase().replace("_", "")
         val title = props["title"] as? String ?: "Select option"

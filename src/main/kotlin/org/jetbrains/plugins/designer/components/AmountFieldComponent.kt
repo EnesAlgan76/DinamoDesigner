@@ -14,7 +14,7 @@ object AmountFieldComponent : ComponentDefinition {
     override val displayName = "Amount Field"
 
     override val propertyDescriptors = listOf(
-        PropertyDescriptor.Text("identifier", "AMOUNT"),
+        PropertyDescriptor.Text("identifier", AmountFieldComponent.type),
         PropertyDescriptor.Text("title", "Amount"),
         PropertyDescriptor.Text("currencyCode", "TL"),
         PropertyDescriptor.Boolean("required", true),
@@ -40,7 +40,7 @@ object AmountFieldComponent : ComponentDefinition {
 
     override fun generateCode(project: Project, component: ComponentInstance, allScreens: List<Screen>): String {
         val props = component.properties
-        val identifierValue = props["identifier"] as? String ?: "AMOUNT"
+        val identifierValue = props["identifier"] as? String ?: AmountFieldComponent.type
         val identifier = TFIdentifierManager.getOrCreateIdentifier(project, identifierValue)
         val varName = identifierValue.lowercase().replace("_", "")
         val title = props["title"] as? String ?: "Amount"

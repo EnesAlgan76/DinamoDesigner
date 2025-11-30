@@ -13,7 +13,7 @@ object DatePickerComponent : ComponentDefinition {
     override val displayName = "Date Picker"
 
     override val propertyDescriptors = listOf(
-        PropertyDescriptor.Text("identifier", "DATEPICKER"),
+        PropertyDescriptor.Text("identifier", DatePickerComponent.type),
         PropertyDescriptor.Text("title", "Select date"),
         PropertyDescriptor.Boolean("validation", true),
         PropertyDescriptor.Text("minDate", "today"),
@@ -39,7 +39,7 @@ object DatePickerComponent : ComponentDefinition {
 
     override fun generateCode(project: Project, component: ComponentInstance, allScreens: List<Screen>): String {
         val props = component.properties
-        val identifierValue = props["identifier"] as? String ?: "DATEPICKER"
+        val identifierValue = props["identifier"] as? String ?: DatePickerComponent.type
         val identifier = TFIdentifierManager.getOrCreateIdentifier(project, identifierValue)
         val varName = identifierValue.lowercase().replace("_", "")
         val title = props["title"] as? String ?: "Select date"

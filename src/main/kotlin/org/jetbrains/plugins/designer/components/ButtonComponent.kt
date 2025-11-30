@@ -9,11 +9,11 @@ import org.jetbrains.plugins.designer.models.Screen
 import javax.swing.ImageIcon
 
 object ButtonComponent : ComponentDefinition {
-    override val type = "BUTTON"
+    override val type = "Button"
     override val displayName = "Button"
 
     override val propertyDescriptors = listOf(
-        PropertyDescriptor.Text("identifier", "BUTTON"),
+        PropertyDescriptor.Text("identifier", ButtonComponent.type),
         PropertyDescriptor.Text("text", "Click Me"),
         PropertyDescriptor.Text("buttonType", "PRIMARY"),
         PropertyDescriptor.ScreenReference("targetScreen")
@@ -38,7 +38,7 @@ object ButtonComponent : ComponentDefinition {
 
     override fun generateCode(project: Project, component: ComponentInstance, allScreens: List<Screen>): String {
         val props = component.properties
-        val identifierValue = props["identifier"] as? String ?: "BUTTON"
+        val identifierValue = props["identifier"] as? String ?: ButtonComponent.type
         val identifier = TFIdentifierManager.getOrCreateIdentifier(project, identifierValue)
         val varName = identifierValue.lowercase().replace("_", "")
         val text = props["text"] as? String ?: "Click Me"

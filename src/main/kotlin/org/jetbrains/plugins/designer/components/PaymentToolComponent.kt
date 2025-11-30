@@ -13,7 +13,7 @@ object PaymentToolComponent : ComponentDefinition {
     override val displayName = "Payment Tool"
 
     override val propertyDescriptors = listOf(
-        PropertyDescriptor.Text("identifier", "PAYMENTTOOL"),
+        PropertyDescriptor.Text("identifier", PaymentToolComponent.type),
         PropertyDescriptor.Text("title", "Select payment method"),
         PropertyDescriptor.Enum("paymentToolType", "Both",
             listOf("Account", "CreditCard", "Both")),
@@ -41,7 +41,7 @@ object PaymentToolComponent : ComponentDefinition {
 
     override fun generateCode(project: Project, component: ComponentInstance, allScreens: List<Screen>): String {
         val props = component.properties
-        val identifierValue = props["identifier"] as? String ?: "PAYMENTTOOL"
+        val identifierValue = props["identifier"] as? String ?: PaymentToolComponent.type
         val identifier = TFIdentifierManager.getOrCreateIdentifier(project, identifierValue)
         val varName = identifierValue.lowercase().replace("_", "")
         val title = props["title"] as? String ?: "Select payment method"

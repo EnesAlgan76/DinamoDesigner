@@ -179,10 +179,10 @@ IMPORTANT: All properties are OPTIONAL except where noted. Only include properti
 AVAILABLE COMPONENTS:
 
 1. ${TextFieldComponent.type} - Text input field
-   Example : {"type": "${TextFieldComponent.type}", "properties": {"identifier": "PHONE", "title": "Telefon", "rightButton": {"title": "Rehber", "identifier": "CONTACTS_BUTTON", "value": "contacts" , "dataSourceIdentifier": ""}}}}
+   Example : {"type": "${TextFieldComponent.type}", "properties": {"identifier": "phone", "title": "Telefon", "rightButton": {"title": "Rehber", "identifier": "contactsButton", "value": "contacts" , "dataSourceIdentifier": ""}}}}
 
    All Properties:
-   - identifier: string (UPPERCASE_SNAKE_CASE, default: "TEXTFIELD")
+   - identifier: string (camelCase, default: "textField")
    - title: string (default: "Enter text")
    - maxLength: number (default: 200)
    - required: boolean (default: false)
@@ -193,7 +193,7 @@ AVAILABLE COMPONENTS:
    - rightButton: object (OPTIONAL - nested object for right-side button functionality. Include ALL fields even if empty)
      {
        "title": string (button display text, required),
-       "identifier": string (button identifier in UPPERCASE_SNAKE_CASE, required),
+       "identifier": string (button identifier in camelCase, required),
        "value": string (button action value, required),
        "dataSourceIdentifier": string (default: "")
      }
@@ -203,18 +203,18 @@ AVAILABLE COMPONENTS:
    - disable: boolean (default: false)
 
 2. ${AmountFieldComponent.type} - Currency amount input
-   Example: {"type": "${AmountFieldComponent.type}", "properties": {"identifier": "TRANSFER_AMOUNT", "title": "Tutar"}}
+   Example: {"type": "${AmountFieldComponent.type}", "properties": {"identifier": "transferAmount", "title": "Tutar"}}
    All Properties:
-   - identifier: string (default: "AMOUNT")
+   - identifier: string (default: "amount")
    - title: string (default: "Amount")
    - currencyCode: string (default: "TL")
    - required: boolean (default: true)
    - hideFraction: boolean (default: false)
 
 3. COMBO_BOX - Dropdown selector
-   Example: {"type": "${ComboBoxComponent.type}", "properties": {"identifier": "FROM_ACCOUNT", "title": "Hesap Seçin", "items": "Hesap 1,Hesap 2,Hesap 3"}}
+   Example: {"type": "${ComboBoxComponent.type}", "properties": {"identifier": "fromAccount", "title": "Hesap Seçin", "items": "Hesap 1,Hesap 2,Hesap 3"}}
    All Properties:
-   - identifier: string (default: "${ComboBoxComponent.type}")
+   - identifier: string (default: "comboBox")
    - title: string (default: "Select option")
    - disable: boolean (default: false)
    - items: string (comma-separated values like "Item1,Item2,Item3", default: "Option 1,Option 2,Option 3")
@@ -226,18 +226,18 @@ AVAILABLE COMPONENTS:
    - informationTitle: string (default: "")
 
 4. DATE_PICKER - Date selection
-   Example: {"type": "DATE_PICKER", "properties": {"identifier": "BIRTH_DATE", "title": "Doğum Tarihi"}}
+   Example: {"type": "DATE_PICKER", "properties": {"identifier": "birthDate", "title": "Doğum Tarihi"}}
    All Properties:
-   - identifier: string (default: "DATEPICKER")
+   - identifier: string (default: "datePicker")
    - title: string (default: "Select date")
    - validation: boolean (default: true)
    - minDate: string (default: "today")
    - maxDate: string (default: "")
 
 5. CHECKBOX - Checkbox with optional popup
-   Example: {"type": "${CheckBoxComponent.type}", "properties": {"identifier": "TERMS_AGREE", "text": "Şartları kabul ediyorum", "required": true}}
+   Example: {"type": "${CheckBoxComponent.type}", "properties": {"identifier": "termsAgree", "text": "Şartları kabul ediyorum", "required": true}}
    All Properties:
-   - identifier: string (default: "${CheckBoxComponent.type}")
+   - identifier: string (default: "checkBox")
    - text: string (default: "Checkbox Text")
    - underlineText: string (default: "")
    - descriptionText: string (default: "")
@@ -252,17 +252,17 @@ AVAILABLE COMPONENTS:
    - informationAlertTitle: string (default: "")
 
 6. BUTTON - Action button
-   Example: {"type": "BUTTON", "properties": {"identifier": "CONTINUE_BTN", "text": "Devam Et"}}
+   Example: {"type": "Button", "properties": {"identifier": "continueBtn", "text": "Devam Et"}}
    All Properties:
-   - identifier: string (default: "BUTTON")
+   - identifier: string (default: "button")
    - text: string (default: "Click Me")
    - buttonType: string (default: "PRIMARY")
    - targetScreen: string (screen ID for navigation, default: "")
 
 7. PAYMENT_TOOL - Payment method selector
-   Example: {"type": "${PaymentToolComponent.type}", "properties": {"identifier": "PAYMENT_METHOD", "title": "Ödeme Yöntemi"}}
+   Example: {"type": "${PaymentToolComponent.type}", "properties": {"identifier": "paymentMethod", "title": "Ödeme Yöntemi"}}
    All Properties:
-   - identifier: string (default: "${PaymentToolComponent.type}")
+   - identifier: string (default: "paymentTool")
    - title: string (default: "Select payment method")
    - paymentToolType: "Account"|"CreditCard"|"Both" (default: "Both")
    - required: boolean (default: true)
@@ -270,11 +270,11 @@ AVAILABLE COMPONENTS:
    - screenInfo: string (default: "")
 
 RULES:
-- All identifiers MUST be in UPPERCASE_SNAKE_CASE format (e.g., TRANSFER_AMOUNT, FROM_ACCOUNT)
+- All identifiers should be in camelCase format (e.g., transferAmount, fromAccount, continueBtn)
 - Return ONLY a valid JSON object with "components" array
 - Each component must have "type" and "properties"
 - Do NOT include any explanations, markdown formatting, or extra text
-- Always include at least one BUTTON component
+- Always include at least one Button component
 - For forms, use appropriate field types based on data (amounts → AMOUNT_FIELD, accounts → COMBO_BOX, etc.)
 - Only include properties you actually need to set - omitted properties will automatically use their defaults
 

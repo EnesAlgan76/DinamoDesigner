@@ -13,7 +13,7 @@ object CheckBoxComponent : ComponentDefinition {
     override val displayName = "CheckBox"
 
     override val propertyDescriptors = listOf(
-        PropertyDescriptor.Text("identifier", "CHECKBOX"),
+        PropertyDescriptor.Text("identifier", CheckBoxComponent.type),
         PropertyDescriptor.Text("text", "Checkbox Text"),
         PropertyDescriptor.Text("underlineText", ""),
         PropertyDescriptor.Text("descriptionText", ""),
@@ -47,7 +47,7 @@ object CheckBoxComponent : ComponentDefinition {
 
     override fun generateCode(project: Project, component: ComponentInstance, allScreens: List<Screen>): String {
         val props = component.properties
-        val identifierValue = props["identifier"] as? String ?: "CHECKBOX"
+        val identifierValue = props["identifier"] as? String ?: CheckBoxComponent.type
         val identifier = TFIdentifierManager.getOrCreateIdentifier(project, identifierValue)
         val varName = identifierValue.lowercase().replace("_", "")
         val text = props["text"] as? String ?: "Checkbox Text"
