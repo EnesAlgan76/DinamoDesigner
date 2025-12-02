@@ -56,6 +56,7 @@ class PreviewWebSocketServer(host: String = "10.141.8.82", port: Int = 8887) : W
                 }
             )
         )
+        println(gson.toJson(payload))
         broadcast(gson.toJson(payload))
     }
 

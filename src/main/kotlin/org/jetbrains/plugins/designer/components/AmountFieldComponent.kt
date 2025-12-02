@@ -17,8 +17,9 @@ object AmountFieldComponent : ComponentDefinition {
         PropertyDescriptor.Text("identifier", AmountFieldComponent.type),
         PropertyDescriptor.Text("title", "Amount"),
         PropertyDescriptor.Text("currencyCode", "TL"),
-        PropertyDescriptor.Boolean("required", true),
-        PropertyDescriptor.Boolean("hideFraction", false)
+        PropertyDescriptor.Boolean("required", false),
+        PropertyDescriptor.Boolean("hideFraction", false),
+        PropertyDescriptor.Boolean("disable", false)
     )
 
     override fun getDisplayIcon(size: Int?): ImageIcon {
@@ -47,6 +48,7 @@ object AmountFieldComponent : ComponentDefinition {
         val currencyCode = props["currencyCode"] as? String ?: "TL"
         val required = props["required"] as? Boolean ?: true
         val hideFraction = props["hideFraction"] as? Boolean ?: false
+        val disabled = props["disabled"] as? Boolean ?: false
 
         return buildString {
             appendLine("        TFComponentAmountTextFieldInput $varName = new TFComponentAmountTextFieldInput($identifier);")
@@ -59,6 +61,9 @@ object AmountFieldComponent : ComponentDefinition {
             if (required) {
                 val requiredMessage = TFMessagesManager.getOrCreateMessage(project, "${title} is required")
                 appendLine("        $varName.setValidation(true, $requiredMessage);")
+            }
+            if (disabled) {
+                appendLine("        $varName.setDisabled(true);")
             }
             appendLine("        rowViewModelList.add($varName);")
         }

@@ -17,7 +17,8 @@ object DatePickerComponent : ComponentDefinition {
         PropertyDescriptor.Text("title", "Select date"),
         PropertyDescriptor.Boolean("validation", true),
         PropertyDescriptor.Text("minDate", "today"),
-        PropertyDescriptor.Text("maxDate", "")
+        PropertyDescriptor.Text("maxDate", ""),
+        PropertyDescriptor.Boolean("disable", false)
     )
 
     override fun getDisplayIcon(size: Int?): ImageIcon {
@@ -44,6 +45,7 @@ object DatePickerComponent : ComponentDefinition {
         val varName = identifierValue.lowercase().replace("_", "")
         val title = props["title"] as? String ?: "Select date"
         val validation = props["validation"] as? Boolean ?: true
+        val disabled = props["disabled"] as? Boolean ?: false
 
         return buildString {
             appendLine("        TFComponentDateInput $varName = new TFComponentDateInput($identifier);")
@@ -51,6 +53,9 @@ object DatePickerComponent : ComponentDefinition {
             appendLine("        $varName.setTitle($titleMessage);")
             if (validation) {
                 appendLine("        $varName.setValidation(true);")
+            }
+            if (disabled) {
+                appendLine("        $varName.setDisabled(true);")
             }
             appendLine("        rowViewModelList.add($varName);")
         }

@@ -8,6 +8,7 @@ import org.jetbrains.plugins.designer.config.ApiKeyConfig
 import org.jetbrains.plugins.template.designer.components.ButtonComponent
 import org.jetbrains.plugins.template.designer.components.CheckBoxComponent
 import org.jetbrains.plugins.template.designer.components.ComboBoxComponent
+import org.jetbrains.plugins.template.designer.components.DatePickerComponent
 import org.jetbrains.plugins.template.designer.components.PaymentToolComponent
 import org.jetbrains.plugins.template.designer.components.TextFieldComponent
 import java.awt.image.BufferedImage
@@ -212,7 +213,7 @@ AVAILABLE COMPONENTS:
    - required: boolean (default: true)
    - hideFraction: boolean (default: false)
 
-3. COMBO_BOX - Dropdown selector
+3. ${ComboBoxComponent.type} - Dropdown selector
    Example: {"type": "${ComboBoxComponent.type}", "properties": {"identifier": "fromAccount", "title": "Hesap Seçin", "items": "Hesap 1,Hesap 2,Hesap 3"}}
    All Properties:
    - identifier: string (default: "comboBox")
@@ -226,16 +227,16 @@ AVAILABLE COMPONENTS:
    - informationString: string (default: "")
    - informationTitle: string (default: "")
 
-4. DATE_PICKER - Date selection
-   Example: {"type": "DATE_PICKER", "properties": {"identifier": "birthDate", "title": "Doğum Tarihi"}}
+4. ${DatePickerComponent.type} - Date selection
+   Example: {"type": "${DatePickerComponent.type}", "properties": {"identifier": "birthDate", "title": "Doğum Tarihi"}}
    All Properties:
-   - identifier: string (default: "datePicker")
+   - identifier: string (default: "DateInput")
    - title: string (default: "Select date")
    - validation: boolean (default: true)
    - minDate: string (default: "today")
    - maxDate: string (default: "")
 
-5. CHECKBOX - Checkbox with optional popup
+5. ${CheckBoxComponent.type} - Checkbox with optional popup
    Example: {"type": "${CheckBoxComponent.type}", "properties": {"identifier": "termsAgree", "text": "Şartları kabul ediyorum", "required": true}}
    All Properties:
    - identifier: string (default: "checkBox")
@@ -262,7 +263,7 @@ AVAILABLE COMPONENTS:
    - disable: boolean (default: false)
    - targetScreen: string (screen ID for navigation, default: "")
 
-7. PAYMENT_TOOL - Payment method selector
+7. ${PaymentToolComponent.type} - Payment method selector
    Example: {"type": "${PaymentToolComponent.type}", "properties": {"identifier": "paymentMethod", "title": "Ödeme Yöntemi"}}
    All Properties:
    - identifier: string (default: "paymentTool")

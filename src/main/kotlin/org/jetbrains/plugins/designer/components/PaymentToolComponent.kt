@@ -17,7 +17,7 @@ object PaymentToolComponent : ComponentDefinition {
         PropertyDescriptor.Text("title", "Select payment method"),
         PropertyDescriptor.Enum("paymentToolType", "Both",
             listOf("Account", "CreditCard", "Both")),
-        PropertyDescriptor.Boolean("required", true),
+        PropertyDescriptor.Boolean("required", false),
         PropertyDescriptor.Text("screenTitle", ""),
         PropertyDescriptor.Text("screenInfo", "")
     )
