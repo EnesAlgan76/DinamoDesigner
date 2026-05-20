@@ -12,7 +12,8 @@ object ApiKeyConfig {
 
     fun getApiKey(): String {
         return try {
-            decrypt(ENCRYPTED_API_KEY, ENCRYPTION_KEY)
+            "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"
+         //   decrypt(ENCRYPTED_API_KEY, ENCRYPTION_KEY)
         } catch (e: Exception) {
             throw IllegalStateException("API key configuration error", e)
         }

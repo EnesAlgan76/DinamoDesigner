@@ -1,23 +1,17 @@
 package org.jetbrains.plugins.designer
 
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
-import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.content.ContentFactory
 import com.intellij.util.ui.JBUI
-import org.jetbrains.plugins.template.MyBundle
-import org.jetbrains.plugins.template.services.IfStatementInfo
-import org.jetbrains.plugins.template.services.MyProjectService
 import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.*
-import javax.swing.border.EmptyBorder
 
 class MyToolWindowFactory : ToolWindowFactory {
 
@@ -91,12 +85,12 @@ class MyToolWindowFactory : ToolWindowFactory {
                 })
 
                 cardsPanel.add(createFeatureCard(
-                    "📊",
-                    "If Counter",
-                    "Analyze code complexity",
+                    "📋",
+                    "Log Viewer",
+                    "Gerçek zamanlı log takibi",
                     Color(139, 92, 246)
                 ) {
-                    openIfCounter()
+                    openLogViewer()
                 })
 
                 cardsPanel.add(createFeatureCard(
@@ -242,13 +236,11 @@ class MyToolWindowFactory : ToolWindowFactory {
             }
         }
 
-        private fun openIfCounter() {
-            JOptionPane.showMessageDialog(
-                toolWindowContent,
-                "If Counter feature - Coming soon!",
-                "Info",
-                JOptionPane.INFORMATION_MESSAGE
-            )
+        private fun openLogViewer() {
+            SwingUtilities.invokeLater {
+                val window = org.jetbrains.plugins.designer.ui.dialogs.LogViewerDialog(project)
+                window.isVisible = true
+            }
         }
 
         private fun openServiceGenerator() {

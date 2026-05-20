@@ -23,6 +23,7 @@
         <postStartupActivity implementation="org.jetbrains.plugins.template.startup.MyProjectActivity" />
 
         <projectService serviceImplementation="org.jetbrains.plugins.template.services.MyProjectService"/>
+        <projectService serviceImplementation="org.jetbrains.plugins.designer.services.LogViewerConfigService"/>
     </extensions>
 
 

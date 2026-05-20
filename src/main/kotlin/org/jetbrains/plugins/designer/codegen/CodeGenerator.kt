@@ -89,6 +89,7 @@ import com.dinamo.components.button.TFComponentTextButton;
 import com.dinamo.components.campaign.*;
 import com.dinamo.components.card.TFComponentDoubleOperation;
 import com.dinamo.components.card.TFComponentGenericCard;
+import com.dinamo.components.datepicker.TFComponentDateInput;
 import com.dinamo.components.card.TFComponentOperation;
 import com.dinamo.components.keyvaluelabel.*;
 import com.dinamo.components.label.TFComponentGenericLabel;
@@ -281,6 +282,52 @@ public class $className extends TFBaseFlow {
 """.trimIndent())
 
         var isFirst = true
+
+        // Handle regular button navigations for all Form screens (from components list)
+        screens.filter { it.type == ScreenType.Form }.forEach { formScreen ->
+            formScreen.components.filter { it.type == "Button" }.forEach { button ->
+                val targetScreenId = button.properties["targetScreen"] as? String
+
+                if (!targetScreenId.isNullOrEmpty()) {
+                    val targetScreen = screens.find { it.id == targetScreenId }
+                    if (targetScreen != null) {
+                        val condition = if (isFirst) "if" else "} else if"
+                        isFirst = false
+
+                        val buttonId = button.properties["identifier"] as? String ?: ""
+                        val buttonIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, buttonId)
+                        val targetIdentifier = TFIdentifierManager.getOrCreateIdentifier(project, targetScreen.name)
+
+                        code.append("\n        $condition (request.getParameters().get(TFIdentifier.IDENTIFIER).toString().equals($buttonIdentifier)) {\n")
+                        code.append("            identifier = $targetIdentifier;\n")
+                        code.append("            screenType = TFScreenType.${targetScreen.type};\n")
+
+                        when (targetScreen.type) {
+                            ScreenType.Form -> {
+                                code.append("            properties.put(TFIdentifier.TITLE, messages.getMessage(\"${targetScreen.name.lowercase()}_title\"));\n")
+                                code.append("            properties.put(TFIdentifier.INPUTS, get${targetScreen.name}Inputs(cachedUtil, service, messages));\n")
+                                code.append("            ThemeUtil.configureFormProperties(getThemeValue(), properties, Util.getNavigationBarContinueButton());\n")
+
+                                val otherFooterButtons = targetScreen.footerComponents.filter {
+                                    (it.properties["isContinueButton"] as? Boolean) != true
+                                }
+                                if (otherFooterButtons.isNotEmpty()) {
+                                    code.append("            properties.put(TFIdentifier.FOOTERVIEWMODELS, get${targetScreen.name}FooterButtons());\n")
+                                }
+                            }
+                            ScreenType.Confirm -> {
+                                code.append("            properties = get${targetScreen.name}Properties(service, messages, request);\n")
+                                code.append("            ThemeUtil.configureFormProperties(getThemeValue(), properties, Util.getNavigationBarContinueButton());\n")
+                            }
+                            else -> {
+                                code.append("            properties = get${targetScreen.name}Properties(service, messages);\n")
+                            }
+                        }
+                        code.append("        ")
+                    }
+                }
+            }
+        }
 
         // Handle footer button navigations for all Form screens
         screens.filter { it.type == ScreenType.Form }.forEach { formScreen ->
