@@ -16,6 +16,8 @@ class ChangeBackendDialog(private val project: Project) : DialogWrapper(project)
 
     private lateinit var filePathField: JTextField
     private lateinit var changeNoField: JTextField
+    private lateinit var fixRadio: JRadioButton
+    private lateinit var devRadio: JRadioButton
     private val configService = BackendConfigService.getInstance(project)
 
     init {
@@ -47,7 +49,41 @@ class ChangeBackendDialog(private val project: Project) : DialogWrapper(project)
         }
 
         mainPanel.add(headerLabel)
-        mainPanel.add(Box.createVerticalStrut(18))
+        mainPanel.add(Box.createVerticalStrut(14))
+
+        val radioPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.X_AXIS)
+            background = JBColor(Color(255, 255, 255), Color(43, 45, 48))
+            alignmentX = Component.LEFT_ALIGNMENT
+            isOpaque = false
+        }
+
+        fixRadio = JRadioButton("Fix").apply {
+            font = Font("SF Pro Display", Font.PLAIN, 13)
+            foreground = JBColor(Color(55, 65, 81), Color(209, 213, 219))
+            background = JBColor(Color(255, 255, 255), Color(43, 45, 48))
+            isOpaque = false
+            isSelected = true
+        }
+
+        devRadio = JRadioButton("Dev").apply {
+            font = Font("SF Pro Display", Font.PLAIN, 13)
+            foreground = JBColor(Color(55, 65, 81), Color(209, 213, 219))
+            background = JBColor(Color(255, 255, 255), Color(43, 45, 48))
+            isOpaque = false
+        }
+
+        val buttonGroup = ButtonGroup()
+        buttonGroup.add(fixRadio)
+        buttonGroup.add(devRadio)
+
+        radioPanel.add(fixRadio)
+        radioPanel.add(Box.createHorizontalStrut(16))
+        radioPanel.add(devRadio)
+        radioPanel.add(Box.createHorizontalGlue())
+
+        mainPanel.add(radioPanel)
+        mainPanel.add(Box.createVerticalStrut(14))
 
         val filePathLabel = JBLabel("Properties Dosya").apply {
             font = Font("SF Pro Display", Font.PLAIN, 12)
@@ -181,6 +217,12 @@ class ChangeBackendDialog(private val project: Project) : DialogWrapper(project)
         if (currentChange != null) {
             changeNoField.text = currentChange
         }
+        val prefix = configService.getCurrentChangePrefix()
+        if (prefix == "Dev") {
+            devRadio.isSelected = true
+        } else {
+            fixRadio.isSelected = true
+        }
     }
 
     override fun doOKAction() {
@@ -231,8 +273,10 @@ class ChangeBackendDialog(private val project: Project) : DialogWrapper(project)
                 return
             }
 
+            val prefix = if (fixRadio.isSelected) "Fix" else "Dev"
+
             val content = file.readText()
-            val updatedContent = content.replace(Regex("Dev-\\d+"), "Dev-$cleanChangeNo")
+            val updatedContent = content.replace(Regex("(?:Dev|Fix)-\\d+"), "$prefix-$cleanChangeNo")
 
             val changeNumber = cleanChangeNo.toIntOrNull()
             val appTestReplacement = if (changeNumber != null && changeNumber % 2 == 0) {
@@ -250,7 +294,7 @@ class ChangeBackendDialog(private val project: Project) : DialogWrapper(project)
             JOptionPane.showMessageDialog(
                 contentPanel,
                 "✅ Backend başarıyla güncellendi!\n\n" +
-                        "Change No: Dev-$cleanChangeNo\n" +
+                        "Change No: $prefix-$cleanChangeNo\n" +
                         "Environment: $appTestReplacement",
                 "İşlem Başarılı",
                 JOptionPane.INFORMATION_MESSAGE

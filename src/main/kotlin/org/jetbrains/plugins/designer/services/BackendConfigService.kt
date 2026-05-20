@@ -37,10 +37,26 @@ class BackendConfigService : PersistentStateComponent<BackendConfigService.State
             if (!file.exists()) return null
 
             val content = file.readText()
-            val regex = Regex("Dev-(\\d+)")
+            val regex = Regex("(?:Dev|Fix)-(\\d+)")
             regex.find(content)?.groupValues?.get(1)
         } catch (e: Exception) {
             null
+        }
+    }
+
+    fun getCurrentChangePrefix(): String {
+        val path = myState.propertiesFilePath
+        if (path.isBlank()) return "Fix"
+
+        return try {
+            val file = java.io.File(path)
+            if (!file.exists()) return "Fix"
+
+            val content = file.readText()
+            val regex = Regex("(Dev|Fix)-\\d+")
+            regex.find(content)?.groupValues?.get(1) ?: "Fix"
+        } catch (e: Exception) {
+            "Fix"
         }
     }
 
