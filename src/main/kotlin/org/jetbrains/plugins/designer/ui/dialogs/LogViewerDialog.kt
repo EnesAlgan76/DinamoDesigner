@@ -1,5 +1,10 @@
 package org.jetbrains.plugins.designer.ui.dialogs
 
+import com.intellij.execution.filters.TextConsoleBuilderFactory
+import com.intellij.execution.ui.ConsoleView
+import com.intellij.execution.ui.ConsoleViewContentType
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
@@ -8,7 +13,6 @@ import org.jetbrains.plugins.designer.services.LogViewerConfigService
 import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import java.awt.event.MouseMotionAdapter
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.awt.geom.RoundRectangle2D
@@ -17,34 +21,33 @@ import java.io.RandomAccessFile
 import java.text.SimpleDateFormat
 import java.util.Date
 import javax.swing.*
-import javax.swing.event.DocumentEvent
-import javax.swing.event.DocumentListener
 
 class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
 
     private val configService = LogViewerConfigService.getInstance(project)
 
     private lateinit var filePathField: JTextField
-    private lateinit var logTextPane: JTextPane
-    private lateinit var lineGutter: LineGutter
-    private lateinit var scrollPane: JScrollPane
+    private lateinit var consoleView: ConsoleView
     private lateinit var statusLabel: JBLabel
 
     private var lastFileSize = 0L
     private var currentFile: File? = null
+    private var lineCount = 0
 
     private val tailTimer = Timer(500) { readNewContent() }
     private val timeFmt = SimpleDateFormat("HH:mm:ss")
 
     companion object {
-        private const val MAX_LINES = 5000
-        private const val INITIAL_LINES = 500
         private val MONO_FONT = Font(Font.MONOSPACED, Font.PLAIN, 11)
+        private val LOG_LEVEL_REGEX = Regex("""^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[.,]\d{3}\s+(ERROR|WARN|INFO|DEBUG|TRACE)""")
+        private val STACK_TRACE_REGEX = Regex("""^(\s+at |\s+\.\.\. \d+ more|Caused by:)""")
     }
 
     init {
         defaultCloseOperation = DISPOSE_ON_CLOSE
         isResizable = true
+
+        consoleView = TextConsoleBuilderFactory.getInstance().createBuilder(project).console
 
         val content = JPanel(BorderLayout()).apply {
             background = JBColor(Color(250, 251, 252), Color(43, 45, 48))
@@ -60,6 +63,7 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
         addWindowListener(object : WindowAdapter() {
             override fun windowClosing(e: WindowEvent) {
                 tailTimer.stop()
+                consoleView.dispose()
             }
         })
 
@@ -160,65 +164,14 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
         isOpaque = false
         border = JBUI.Borders.empty(0, 20, 0, 20)
 
-        logTextPane = JTextPane().apply {
-            background = JBColor(Color(250, 251, 252), Color(30, 33, 38))
-            foreground = JBColor(Color(30, 41, 59), Color(210, 215, 225))
-            font = MONO_FONT
-            border = JBUI.Borders.empty(4, 6)
-        }
+        val consoleActions = DefaultActionGroup(*consoleView.createConsoleActions())
+        val toolbar = ActionManager.getInstance()
+            .createActionToolbar("LogViewerConsole", consoleActions, true)
+        toolbar.targetComponent = consoleView.component
 
-        lineGutter = LineGutter(logTextPane)
-
-        scrollPane = JScrollPane(logTextPane).apply {
-            border = BorderFactory.createLineBorder(
-                JBColor(Color(218, 222, 232), Color(58, 61, 68)), 1
-            )
-            setRowHeaderView(lineGutter)
-            horizontalScrollBarPolicy = JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
-            verticalScrollBarPolicy = JScrollPane.VERTICAL_SCROLLBAR_ALWAYS
-            viewport.addChangeListener { lineGutter.repaint() }
-        }
-
-        add(buildToolbar(), BorderLayout.NORTH)
-        add(scrollPane, BorderLayout.CENTER)
+        add(toolbar.component, BorderLayout.NORTH)
+        add(consoleView.component, BorderLayout.CENTER)
     }
-
-    // ── Toolbar ────────────────────────────────────────────────────────────────
-
-    private fun buildToolbar(): JPanel = JPanel(FlowLayout(FlowLayout.LEFT, 8, 6)).apply {
-        isOpaque = false
-        add(iconBtn("🗑  Temizle", Color(239, 68, 68)) { clearLog() })
-    }
-
-    private fun iconBtn(label: String, tint: Color, action: () -> Unit): JButton =
-        object : JButton(label) {
-            private var hover = false
-
-            init {
-                font = Font("SF Pro Display", Font.PLAIN, 11)
-                foreground = tint
-                isContentAreaFilled = false
-                isFocusPainted = false
-                cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-                border = BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(Color(tint.red, tint.green, tint.blue, 80), 1, true),
-                    JBUI.Borders.empty(4, 10)
-                )
-                addActionListener { action() }
-                addMouseListener(object : MouseAdapter() {
-                    override fun mouseEntered(e: MouseEvent) { hover = true; repaint() }
-                    override fun mouseExited(e: MouseEvent) { hover = false; repaint() }
-                })
-            }
-
-            override fun paintComponent(g: Graphics) {
-                val g2 = g as Graphics2D
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                g2.color = Color(tint.red, tint.green, tint.blue, if (hover) 35 else 12)
-                g2.fill(RoundRectangle2D.Float(0f, 0f, width.toFloat(), height.toFloat(), 8f, 8f))
-                super.paintComponent(g)
-            }
-        }
 
     // ── Status bar ─────────────────────────────────────────────────────────────
 
@@ -236,7 +189,8 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
 
     private fun startTailing(path: String) {
         tailTimer.stop()
-        clearSilent()
+        consoleView.clear()
+        lineCount = 0
         lastFileSize = 0L
         val file = File(path)
         if (!file.exists()) {
@@ -252,7 +206,7 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
     private fun loadInitial(file: File) {
         try {
             val lines = file.readLines(Charsets.UTF_8)
-            val slice = if (lines.size > INITIAL_LINES) lines.takeLast(INITIAL_LINES) else lines
+            val slice = if (lines.size > 500) lines.takeLast(500) else lines
             appendLines(slice)
             lastFileSize = file.length()
         } catch (e: Exception) {
@@ -275,16 +229,15 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
                     if (newLines.isNotEmpty()) {
                         SwingUtilities.invokeLater {
                             appendLines(newLines)
-                            trimOld()
-                            val total = logTextPane.document.defaultRootElement.elementCount
-                            statusLabel.text = "📄  ${file.name}  |  ${timeFmt.format(Date())}  |  $total satır"
+                            statusLabel.text = "📄  ${file.name}  |  ${timeFmt.format(Date())}  |  $lineCount satır"
                         }
                     }
                 }
                 size < lastFileSize -> {
                     lastFileSize = 0L
                     SwingUtilities.invokeLater {
-                        clearSilent()
+                        consoleView.clear()
+                        lineCount = 0
                         statusLabel.text = "🔄  Dosya yenilendi — ${timeFmt.format(Date())}"
                     }
                 }
@@ -293,149 +246,27 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
     }
 
     private fun appendLines(lines: List<String>) {
-        val doc = logTextPane.styledDocument
-        lines.forEach { line -> doc.insertString(doc.length, "$line\n", null) }
-        lineGutter.syncHeight()
-    }
-
-    private fun trimOld() {
-        val doc = logTextPane.styledDocument
-        val root = doc.defaultRootElement
-        if (root.elementCount > MAX_LINES) {
-            val excess = root.elementCount - MAX_LINES
-            doc.remove(0, root.getElement(excess - 1).endOffset)
+        lines.forEach { line ->
+            consoleView.print("$line\n", contentTypeFor(line))
+            lineCount++
         }
     }
 
-    private fun clearLog() {
-        clearSilent()
-        lastFileSize = currentFile?.length() ?: 0L
-        statusLabel.text = currentFile?.let { "📄  ${it.name}  |  Ekran temizlendi" } ?: "Dosya seçilmedi"
-    }
-
-    private fun clearSilent() {
-        val doc = logTextPane.styledDocument
-        doc.remove(0, doc.length)
-        lineGutter.syncHeight()
-    }
-
-    // ── Line number gutter ─────────────────────────────────────────────────────
-
-    inner class LineGutter(private val pane: JTextPane) : JPanel() {
-
-        private val bg = JBColor(Color(242, 244, 247), Color(38, 41, 47))
-        private val fg = JBColor(Color(148, 158, 175), Color(95, 110, 130))
-        private val fgActive = JBColor(Color(99, 102, 241), Color(147, 150, 255))
-        private val hoverBg = JBColor(Color(99, 102, 241, 20), Color(99, 102, 241, 20))
-        private val selBg = JBColor(Color(99, 102, 241, 45), Color(99, 102, 241, 45))
-        private val sep = JBColor(Color(218, 222, 232), Color(55, 58, 65))
-
-        private var hoveredLine = -1
-        private var selectedLine = -1
-
-        init {
-            background = bg
-            preferredSize = Dimension(50, 0)
-
-            addMouseListener(object : MouseAdapter() {
-                override fun mouseClicked(e: MouseEvent) = selectLine(e.y)
-                override fun mouseExited(e: MouseEvent) { hoveredLine = -1; repaint() }
-            })
-            addMouseMotionListener(object : MouseMotionAdapter() {
-                override fun mouseMoved(e: MouseEvent) {
-                    val idx = lineAt(e.y)
-                    if (idx != hoveredLine) { hoveredLine = idx; repaint() }
-                }
-            })
-
-            pane.document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent) = syncHeight()
-                override fun removeUpdate(e: DocumentEvent) = syncHeight()
-                override fun changedUpdate(e: DocumentEvent) {}
-            })
-        }
-
-        fun syncHeight() {
-            SwingUtilities.invokeLater {
-                val lineCount = pane.document.defaultRootElement.elementCount
-                val digits = maxOf(lineCount.toString().length, 3)
-                val fm = getFontMetrics(pane.font)
-                val w = fm.stringWidth("0".repeat(digits)) + 22
-                val h = pane.preferredSize.height
-                if (preferredSize.width != w || preferredSize.height != h) {
-                    preferredSize = Dimension(w, h)
-                    revalidate()
-                }
-                repaint()
+    private fun contentTypeFor(line: String): ConsoleViewContentType {
+        val match = LOG_LEVEL_REGEX.find(line)
+        if (match != null) {
+            return when (match.groupValues[1]) {
+                "ERROR" -> ConsoleViewContentType.LOG_ERROR_OUTPUT
+                "WARN"  -> ConsoleViewContentType.LOG_WARNING_OUTPUT
+                "INFO"  -> ConsoleViewContentType.LOG_INFO_OUTPUT
+                "DEBUG" -> ConsoleViewContentType.LOG_DEBUG_OUTPUT
+                "TRACE" -> ConsoleViewContentType.LOG_VERBOSE_OUTPUT
+                else    -> ConsoleViewContentType.NORMAL_OUTPUT
             }
         }
-
-        private fun lineAt(panelY: Int): Int {
-            val root = pane.document.defaultRootElement
-            for (i in 0 until root.elementCount) {
-                try {
-                    val y = pane.modelToView2D(root.getElement(i).startOffset).y
-                    val nextY = if (i < root.elementCount - 1)
-                        pane.modelToView2D(root.getElement(i + 1).startOffset).y
-                    else Double.MAX_VALUE
-                    if (panelY >= y && panelY < nextY) return i
-                } catch (_: Exception) {}
-            }
-            return -1
-        }
-
-        private fun selectLine(panelY: Int) {
-            val idx = lineAt(panelY)
-            if (idx < 0) return
-            selectedLine = idx
-            repaint()
-            val root = pane.document.defaultRootElement
-            val el = root.getElement(idx)
-            val end = (el.endOffset - 1).coerceAtLeast(el.startOffset)
-            pane.select(el.startOffset, end)
-            pane.requestFocusInWindow()
-        }
-
-        override fun paintComponent(g: Graphics) {
-            val g2 = g as Graphics2D
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-
-            g2.color = bg
-            g2.fillRect(0, 0, width, height)
-            g2.color = sep
-            g2.drawLine(width - 1, 0, width - 1, height)
-
-            val root = pane.document.defaultRootElement
-            val fm = g2.getFontMetrics(pane.font)
-            val clip = g2.clipBounds ?: Rectangle(0, 0, width, height)
-
-            for (i in 0 until root.elementCount) {
-                try {
-                    val y = pane.modelToView2D(root.getElement(i).startOffset).y.toInt()
-                    if (y + fm.height + 4 < clip.y) continue
-                    if (y > clip.y + clip.height) break
-
-                    val lineH = fm.height + 2
-                    val label = (i + 1).toString()
-                    val lx = width - fm.stringWidth(label) - 8
-
-                    when (i) {
-                        hoveredLine -> {
-                            g2.color = hoverBg
-                            g2.fillRect(0, y, width - 1, lineH)
-                            g2.color = fgActive
-                        }
-                        selectedLine -> {
-                            g2.color = selBg
-                            g2.fillRect(0, y, width - 1, lineH)
-                            g2.color = fgActive
-                        }
-                        else -> g2.color = fg
-                    }
-                    g2.drawString(label, lx, y + fm.ascent + 2)
-                } catch (_: Exception) {}
-            }
-        }
+        return if (STACK_TRACE_REGEX.containsMatchIn(line))
+            ConsoleViewContentType.LOG_DEBUG_OUTPUT
+        else
+            ConsoleViewContentType.NORMAL_OUTPUT
     }
 }

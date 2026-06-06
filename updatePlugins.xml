@@ -1,7 +1,7 @@
 <plugins>
     <plugin id="com.enesalgan.dinamodesigner"
-            url="https://github.com/EnesAlgan76/DinamoDesigner/raw/main/build/distributions/IntelliJ%20Platform%20Plugin%20Template-1.0.8.zip"
-            version="1.0.8">
+            url="https://github.com/EnesAlgan76/DinamoDesigner/raw/main/build/distributions/IntelliJ%20Platform%20Plugin%20Template-1.0.9.zip"
+            version="1.0.9">
         <name>Dinamo Designer</name>
         <description>
             IntelliJ için Dinamo Designer eklentisi.
@@ -9,7 +9,7 @@
         <vendor email="ensalgn76@gmail.com" url="https://github.com/EnesAlgan76">Enes Algan</vendor>
         <idea-version since-build="241" until-build="999.*"/>
         <change-notes>
-            Backend değiştir diyaloguna Fix/Dev radio buton seçimi eklendi (1.0.8)
+            Log Viewer ConsoleView ile yeniden yazıldı: wrap text, log seviyesine göre renklendirme (ERROR/WARN/INFO/DEBUG), stack trace navigasyonu (1.0.9)
         </change-notes>
     </plugin>
 </plugins>
