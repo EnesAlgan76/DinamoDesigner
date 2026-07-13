@@ -12,7 +12,7 @@ object ApiKeyConfig {
 
     fun getApiKey(): String {
         return try {
-            "sk-proj-Xcw2G3Y0BMh7mmcukk3pjlhEl53s-"
+            " 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"
          //   decrypt(ENCRYPTED_API_KEY, ENCRYPTION_KEY)
         } catch (e: Exception) {
             throw IllegalStateException("API key configuration error", e)
