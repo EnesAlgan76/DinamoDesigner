@@ -17,7 +17,8 @@ class PluginSettings : PersistentStateComponent<PluginSettings.State> {
         var tfMessagesPath: String = "src/com/pozitron/turkiyefinans/core/messages/messages_tr.properties",
         var screenActionImplPath: String = "src/com/pozitron/turkiyefinans/actions/screen/action/ScreenActionImpl.java",
         var autoWriteToEditor: Boolean = false,
-        var autoUpdateScreenAction: Boolean = true
+        var autoUpdateScreenAction: Boolean = true,
+        var openAiApiKey: String = ""
     )
 
     override fun getState(): State = myState
@@ -54,6 +55,12 @@ class PluginSettings : PersistentStateComponent<PluginSettings.State> {
         get() = myState.autoUpdateScreenAction
         set(value) {
             myState.autoUpdateScreenAction = value
+        }
+
+    var openAiApiKey: String
+        get() = myState.openAiApiKey
+        set(value) {
+            myState.openAiApiKey = value
         }
 
     companion object {

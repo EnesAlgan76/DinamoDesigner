@@ -5,6 +5,7 @@ import com.google.gson.JsonParser
 import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.designer.components.AmountFieldComponent
 import org.jetbrains.plugins.designer.config.ApiKeyConfig
+import org.jetbrains.plugins.designer.settings.PluginSettings
 import org.jetbrains.plugins.template.designer.components.ButtonComponent
 import org.jetbrains.plugins.template.designer.components.CheckBoxComponent
 import org.jetbrains.plugins.template.designer.components.ComboBoxComponent
@@ -87,7 +88,7 @@ Generate ONLY valid JSON response with components array. No explanation, no mark
             val request = HttpRequest.newBuilder()
                 .uri(URI.create(OPENAI_API_URL))
                 .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer ${ApiKeyConfig.getApiKey()}")
+                .header("Authorization", "Bearer ${PluginSettings.getInstance(project).openAiApiKey.ifEmpty { ApiKeyConfig.getApiKey() }}")
                 .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(requestBody)))
                 .build()
 

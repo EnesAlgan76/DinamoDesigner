@@ -6,6 +6,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
 import org.jetbrains.plugins.designer.services.OpenAiService
+import org.jetbrains.plugins.designer.settings.PluginSettings
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
 import java.awt.dnd.*
@@ -17,6 +18,7 @@ import javax.swing.*
 class AIGenerationDialog(private val project: Project) : DialogWrapper(project) {
 
     private val promptArea = JBTextArea(6, 50)
+    private val apiKeyField = JPasswordField(50)
     private var generatedJson: String? = null
     private var selectedImage: BufferedImage? = null
     private var imagePreviewLabel: JLabel? = null
@@ -24,6 +26,10 @@ class AIGenerationDialog(private val project: Project) : DialogWrapper(project) 
 
     init {
         title = "AI Screen Generation"
+        val savedKey = PluginSettings.getInstance(project).openAiApiKey
+        if (savedKey.isNotEmpty()) {
+            apiKeyField.text = savedKey
+        }
         promptArea.lineWrap = true
         promptArea.wrapStyleWord = true
         promptArea.font = Font("SF Pro Display", Font.PLAIN, 14)
@@ -60,10 +66,32 @@ class AIGenerationDialog(private val project: Project) : DialogWrapper(project) 
     override fun createCenterPanel(): JComponent {
         val panel = JPanel(BorderLayout())
         panel.border = JBUI.Borders.empty(20)
-        panel.preferredSize = Dimension(650, 450)
+        panel.preferredSize = Dimension(650, 530)
 
         val mainContainer = JPanel()
         mainContainer.layout = BoxLayout(mainContainer, BoxLayout.Y_AXIS)
+
+        // API Key section
+        val apiKeyLabel = JLabel("🔑 OpenAI API Key").apply {
+            font = Font("SF Pro Display", Font.BOLD, 15)
+            foreground = JBColor(Color(71, 85, 105), Color(148, 163, 184))
+            border = JBUI.Borders.emptyBottom(8)
+            alignmentX = Component.LEFT_ALIGNMENT
+        }
+
+        apiKeyField.apply {
+            font = Font("SF Pro Display", Font.PLAIN, 13)
+            background = JBColor(Color(249, 250, 251), Color(38, 38, 38))
+            foreground = JBColor(Color(17, 24, 39), Color(229, 231, 235))
+            border = BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(JBColor(Color(203, 213, 225), Color(75, 85, 99)), 1, true),
+                JBUI.Borders.empty(6, 8)
+            )
+            alignmentX = Component.LEFT_ALIGNMENT
+            maximumSize = Dimension(Int.MAX_VALUE, 36)
+        }
+
+        val apiKeySpacer = Box.createRigidArea(Dimension(0, 18))
 
         val titleLabel = JLabel("✨ Describe the screen you want to create").apply {
             font = Font("SF Pro Display", Font.BOLD, 15)
@@ -137,6 +165,9 @@ class AIGenerationDialog(private val project: Project) : DialogWrapper(project) 
         uploadPanel = createImageUploadPanel()
         uploadPanel?.alignmentX = Component.LEFT_ALIGNMENT
 
+        mainContainer.add(apiKeyLabel)
+        mainContainer.add(apiKeyField)
+        mainContainer.add(apiKeySpacer)
         mainContainer.add(titleLabel)
         mainContainer.add(inputContainer)
         mainContainer.add(imageTitle)
@@ -246,8 +277,18 @@ class AIGenerationDialog(private val project: Project) : DialogWrapper(project) 
     }
 
     override fun doOKAction() {
-        val userPrompt = promptArea.text.trim()
+        val apiKey = String(apiKeyField.password).trim()
+        if (apiKey.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                contentPane,
+                "Lütfen OpenAI API Key girin",
+                "API Key Gerekli",
+                JOptionPane.WARNING_MESSAGE
+            )
+            return
+        }
 
+        val userPrompt = promptArea.text.trim()
         if (userPrompt.isBlank() || userPrompt == "e.g., Create a login screen with email, password fields and a submit button") {
             JOptionPane.showMessageDialog(
                 contentPane,
@@ -258,6 +299,7 @@ class AIGenerationDialog(private val project: Project) : DialogWrapper(project) 
             return
         }
 
+        PluginSettings.getInstance(project).openAiApiKey = apiKey
         generateScreen(userPrompt)
     }
 
