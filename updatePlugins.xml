@@ -1,7 +1,7 @@
 <plugins>
     <plugin id="com.enesalgan.dinamodesigner"
-            url="https://github.com/EnesAlgan76/DinamoDesigner/raw/main/build/distributions/IntelliJ%20Platform%20Plugin%20Template-1.1.2.zip"
-            version="1.1.2">
+            url="https://github.com/EnesAlgan76/DinamoDesigner/raw/main/build/distributions/IntelliJ%20Platform%20Plugin%20Template-1.1.3.zip"
+            version="1.1.3">
         <name>Dinamo Designer</name>
         <description>
             IntelliJ için Dinamo Designer eklentisi.
@@ -9,7 +9,7 @@
         <vendor email="ensalgn76@gmail.com" url="https://github.com/EnesAlgan76">Enes Algan</vendor>
         <idea-version since-build="241" until-build="999.*"/>
         <change-notes>
-            Log Viewer tamamen yeniden yazıldı: özel JTextPane tabanlı yapı, satır numarası şeridi, timestamp/level/mesaj ayrı renklendirme, word wrap, satır seçme, modern ikonlu toolbar (1.1.0)
+            Log Viewer'a arama özelliği eklendi: ⌘F ile açılır, tüm eşleşmeler sarı, aktif eşleşme turuncu renkte vurgulanır, ↑ ↓ / Enter / Shift+Enter ile gezinme, sonuç sayacı (1.1.3)
         </change-notes>
     </plugin>
 </plugins>

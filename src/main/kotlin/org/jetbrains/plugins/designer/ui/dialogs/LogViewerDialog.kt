@@ -10,6 +10,10 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import org.jetbrains.plugins.designer.services.LogViewerConfigService
 import java.awt.*
+import java.awt.event.ActionEvent
+import java.awt.event.InputEvent
+import java.awt.event.KeyAdapter
+import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.WindowAdapter
@@ -31,6 +35,19 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
     private lateinit var filePathField: JTextField
     private lateinit var textPane: JTextPane
     private lateinit var statusLabel: JBLabel
+
+    // Search
+    private lateinit var searchBarPanel: JPanel
+    private lateinit var searchField: JTextField
+    private lateinit var searchMatchLabel: JBLabel
+    private val matchOffsets = mutableListOf<Int>()
+    private var currentMatchIndex = -1
+    private val normalMatchPainter = DefaultHighlighter.DefaultHighlightPainter(
+        JBColor(Color(0xFFE082), Color(0x7A5C00))
+    )
+    private val currentMatchPainter = DefaultHighlighter.DefaultHighlightPainter(
+        JBColor(Color(0xFF8C00), Color(0xFFB300))
+    )
 
     private var lastFileSize = 0L
     private var currentFile: File? = null
@@ -69,6 +86,7 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
         private val GUTTER_BORDER = JBColor(Color(0xE4E7EB), Color(0x3C3F41))
         private val TITLE_COLOR   = JBColor(Color(0x1E2330), Color(0xDFE1E5))
         private val PATH_FG       = JBColor(Color(0x4B5563), Color(0x9DA5B0))
+        private val MUTED_FG      = JBColor(Color(0x9CA3AF), Color(0x6B7280))
     }
 
     init {
@@ -87,12 +105,28 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
             caretColor = scheme.defaultForeground
         }
 
+        searchBarPanel = buildSearchBar().apply { isVisible = false }
+
+        val centerPanel = JPanel(BorderLayout()).apply {
+            isOpaque = false
+            add(searchBarPanel, BorderLayout.NORTH)
+            add(buildLogArea(), BorderLayout.CENTER)
+        }
+
         val content = JPanel(BorderLayout()).apply { background = BG_PANEL }
         content.add(buildHeader(), BorderLayout.NORTH)
-        content.add(buildLogArea(), BorderLayout.CENTER)
+        content.add(centerPanel, BorderLayout.CENTER)
         content.add(buildStatusBar(), BorderLayout.SOUTH)
 
         contentPane = content
+
+        // ⌘F (macOS) / Ctrl+F (diğer)
+        val im = rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx), "toggleSearch")
+        rootPane.actionMap.put("toggleSearch", object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent) = toggleSearch()
+        })
+
         setSize(1060, 720)
         setLocationRelativeTo(null)
 
@@ -179,7 +213,6 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
         background = BG_HEADER
         border = JBUI.Borders.empty(14, 20, 14, 20)
 
-        // title row: "Log Viewer" left, icon actions right
         val titleRow = JPanel(BorderLayout()).apply {
             isOpaque = false
 
@@ -190,6 +223,7 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
 
             add(JPanel(FlowLayout(FlowLayout.RIGHT, 4, 0)).apply {
                 isOpaque = false
+                add(buildIconButton("Ara (⌘F)", "/icons/search.svg") { toggleSearch() })
                 add(buildIconButton("Alta git", "/icons/scrollend.svg") {
                     textPane.caretPosition = textPane.document.length
                 })
@@ -202,7 +236,6 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
         }
         add(titleRow, BorderLayout.NORTH)
 
-        // file path row below title
         add(JPanel(BorderLayout()).apply {
             isOpaque = false
             border = JBUI.Borders.emptyTop(10)
@@ -224,16 +257,14 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
                 isBorderPainted = false
                 border = JBUI.Borders.empty(4)
                 val size = Dimension(28, 28)
-                preferredSize = size
-                minimumSize   = size
-                maximumSize   = size
+                preferredSize = size; minimumSize = size; maximumSize = size
                 cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
 
                 addMouseListener(object : MouseAdapter() {
                     override fun mouseEntered(e: MouseEvent) { hovered = true; repaint() }
                     override fun mouseExited(e: MouseEvent)  { hovered = false; repaint() }
-                    override fun mouseClicked(e: MouseEvent) { action() }
                 })
+                addActionListener { action() }
             }
 
             override fun paintComponent(g: Graphics) {
@@ -305,6 +336,189 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
         add(filePathField, BorderLayout.CENTER)
     }
 
+    // ── Search bar ────────────────────────────────────────────────────────────
+
+    private fun buildSearchBar(): JPanel = object : JPanel(BorderLayout()) {
+        override fun paintComponent(g: Graphics) {
+            super.paintComponent(g)
+            g.color = BORDER_COLOR
+            g.drawLine(0, height - 1, width, height - 1)
+        }
+    }.apply {
+        background = BG_HEADER
+        border = JBUI.Borders.empty(8, 20)
+
+        // sağa hizalı: [🔍 field ] [3/42] [↑][↓] [✕]
+        val right = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.X_AXIS)
+            isOpaque = false
+
+            add(Box.createHorizontalGlue())
+
+            // arama pill'i: [🔍  field]
+            add(object : JPanel(BorderLayout(6, 0)) {
+                override fun paintComponent(g: Graphics) {
+                    val g2 = g as Graphics2D
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                    g2.color = JBColor(Color(0xF3F4F6), Color(0x3C3F41))
+                    g2.fill(RoundRectangle2D.Float(0f, 0f, width.toFloat(), height.toFloat(), 8f, 8f))
+                    g2.color = BORDER_COLOR
+                    g2.stroke = BasicStroke(1f)
+                    g2.draw(RoundRectangle2D.Float(0.5f, 0.5f, width - 1f, height - 1f, 8f, 8f))
+                    super.paintComponent(g)
+                }
+            }.apply {
+                isOpaque = false
+                border = JBUI.Borders.empty(5, 10)
+                maximumSize = Dimension(260, 30)
+                preferredSize = Dimension(260, 30)
+
+                add(JLabel("🔍").apply { font = font.deriveFont(11f) }, BorderLayout.WEST)
+
+                searchField = JTextField().apply {
+                    font = ideFont.deriveFont(ideFont.size.toFloat() - 1f)
+                    border = JBUI.Borders.empty()
+                    isOpaque = false
+                    toolTipText = "Enter / ↓  sonraki  •  Shift+Enter / ↑  önceki  •  Esc  kapat"
+                    addKeyListener(object : KeyAdapter() {
+                        override fun keyPressed(e: KeyEvent) {
+                            when {
+                                e.keyCode == KeyEvent.VK_ESCAPE -> hideSearch()
+                                e.keyCode == KeyEvent.VK_ENTER && e.isShiftDown -> navigateMatch(-1)
+                                e.keyCode == KeyEvent.VK_ENTER -> navigateMatch(1)
+                                e.keyCode == KeyEvent.VK_DOWN  -> { navigateMatch(1); e.consume() }
+                                e.keyCode == KeyEvent.VK_UP    -> { navigateMatch(-1); e.consume() }
+                            }
+                        }
+                    })
+                    document.addDocumentListener(object : DocumentListener {
+                        override fun insertUpdate(e: DocumentEvent) = performSearch(text)
+                        override fun removeUpdate(e: DocumentEvent) = performSearch(text)
+                        override fun changedUpdate(e: DocumentEvent) {}
+                    })
+                }
+                add(searchField, BorderLayout.CENTER)
+            })
+
+            add(Box.createHorizontalStrut(10))
+
+            // sayaç
+            searchMatchLabel = JBLabel("").apply {
+                font = Font("SF Pro Display", Font.PLAIN, 11)
+                foreground = MUTED_FG
+                preferredSize = Dimension(52, 20)
+                minimumSize  = preferredSize
+                maximumSize  = preferredSize
+                horizontalAlignment = SwingConstants.CENTER
+            }
+            add(searchMatchLabel)
+
+            add(Box.createHorizontalStrut(8))
+
+            // ↑ ↓ ✕ — küçük, sade
+            add(sBtn("↑", "Önceki") { navigateMatch(-1) })
+            add(Box.createHorizontalStrut(2))
+            add(sBtn("↓", "Sonraki") { navigateMatch(1) })
+            add(Box.createHorizontalStrut(8))
+            add(sBtn("✕", "Kapat") { hideSearch() })
+        }
+        add(right, BorderLayout.CENTER)
+    }
+
+    private fun sBtn(label: String, tooltip: String, action: () -> Unit): JButton =
+        JButton(label).apply {
+            toolTipText = tooltip
+            font = Font("SF Pro Display", Font.PLAIN, 12)
+            foreground = Color.WHITE
+            isFocusPainted = false
+            isFocusable = false
+            isContentAreaFilled = false
+            isBorderPainted = false
+            border = JBUI.Borders.empty()
+            preferredSize = Dimension(18, 18)
+            minimumSize  = Dimension(18, 18)
+            maximumSize  = Dimension(18, 18)
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            addActionListener { action() }
+        }
+
+    // ── Search logic ───────────────────────────────────────────────────────────
+
+    private fun toggleSearch() {
+        if (searchBarPanel.isVisible) hideSearch()
+        else {
+            searchBarPanel.isVisible = true
+            searchField.requestFocusInWindow()
+            searchField.selectAll()
+        }
+    }
+
+    private fun hideSearch() {
+        searchBarPanel.isVisible = false
+        textPane.highlighter.removeAllHighlights()
+        matchOffsets.clear()
+        currentMatchIndex = -1
+        searchMatchLabel.text = ""
+        textPane.requestFocusInWindow()
+    }
+
+    private fun performSearch(query: String) {
+        textPane.highlighter.removeAllHighlights()
+        matchOffsets.clear()
+        currentMatchIndex = -1
+
+        if (query.isBlank()) { searchMatchLabel.text = ""; return }
+
+        val docText = textPane.document.getText(0, textPane.document.length)
+        val lower = docText.lowercase()
+        val qLower = query.lowercase()
+        var pos = 0
+        while (true) {
+            val idx = lower.indexOf(qLower, pos)
+            if (idx == -1) break
+            matchOffsets.add(idx)
+            pos = idx + 1
+        }
+
+        if (matchOffsets.isNotEmpty()) {
+            currentMatchIndex = 0
+            rebuildHighlights()
+        } else {
+            searchMatchLabel.text = "Sonuç yok"
+        }
+    }
+
+    private fun navigateMatch(delta: Int) {
+        if (matchOffsets.isEmpty()) return
+        currentMatchIndex = (currentMatchIndex + delta + matchOffsets.size) % matchOffsets.size
+        rebuildHighlights()
+    }
+
+    private fun rebuildHighlights() {
+        textPane.highlighter.removeAllHighlights()
+        val qLen = searchField.text.length
+        matchOffsets.forEachIndexed { i, start ->
+            val painter = if (i == currentMatchIndex) currentMatchPainter else normalMatchPainter
+            textPane.highlighter.addHighlight(start, start + qLen, painter)
+        }
+        scrollToCurrentMatch()
+        updateMatchLabel()
+    }
+
+    private fun scrollToCurrentMatch() {
+        if (currentMatchIndex !in matchOffsets.indices) return
+        try {
+            val rect = textPane.modelToView2D(matchOffsets[currentMatchIndex]).bounds
+            textPane.scrollRectToVisible(rect)
+            textPane.caretPosition = matchOffsets[currentMatchIndex]
+        } catch (_: Exception) {}
+    }
+
+    private fun updateMatchLabel() {
+        searchMatchLabel.text = if (matchOffsets.isEmpty()) "Sonuç yok"
+        else "${currentMatchIndex + 1} / ${matchOffsets.size}"
+    }
+
     // ── Log area ───────────────────────────────────────────────────────────────
 
     private fun buildLogArea(): JPanel = JPanel(BorderLayout()).apply {
@@ -335,7 +549,7 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
         border = JBUI.Borders.empty(6, 20, 8, 20)
         statusLabel = JBLabel("Dosya seçilmedi").apply {
             font = Font("SF Pro Display", Font.PLAIN, 11)
-            foreground = JBColor(Color(0x9CA3AF), Color(0x6B7280))
+            foreground = MUTED_FG
         }
         add(statusLabel, BorderLayout.WEST)
     }
@@ -402,9 +616,9 @@ class LogViewerDialog(private val project: Project) : JFrame("Log Viewer") {
             val match = LOG_PARSE_REGEX.find(line)
             if (match != null) {
                 val (timestamp, level, rest) = match.destructured
-                doc.insertString(doc.length, timestamp,            charAttrs(COLOR_TIMESTAMP))
+                doc.insertString(doc.length, timestamp,             charAttrs(COLOR_TIMESTAMP))
                 doc.insertString(doc.length, " ${level.padEnd(5)}", charAttrs(levelColor(level)))
-                doc.insertString(doc.length, "$rest\n",            charAttrs(normalColor()))
+                doc.insertString(doc.length, "$rest\n",             charAttrs(normalColor()))
             } else {
                 val color = if (STACK_TRACE_REGEX.containsMatchIn(line)) COLOR_STACK else normalColor()
                 doc.insertString(doc.length, "$line\n", charAttrs(color))
